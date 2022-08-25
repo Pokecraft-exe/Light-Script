@@ -10,13 +10,8 @@ def write(file, towrite):
         f.write(towrite)
 
 """
-steps:
-parse
-execute
+todo:
 for
-if
-else
-elif
 while
 math var
 """
