@@ -5,14 +5,12 @@ def read(file):
         c = f.read()
     return c
 
+
 def write(file, towrite):
     with open(file, 'w') as f:
         f.write(towrite)
 
-"""
-TODO:
-for
-"""
+        
 def search_one(string, char):
     isinstring = 0
     first = ""
