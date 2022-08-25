@@ -519,7 +519,6 @@ class ls():
             script = script[1:script.index(end)]
             if len(parameters) > len(parametersF):
                 print("Error: too many parameters for function `{}', at line {}".format(function, line))
-                print(parameters, parametersF)
             if len(parameters) < len(parametersF):
                 print("Error: not enough parameters for function `{}', at line {}".format(function, line))
                 return None
