@@ -10,7 +10,7 @@ def write(file, towrite):
         f.write(towrite)
 
 """
-todo:
+TODO:
 for
 while
 math var
@@ -421,6 +421,7 @@ class ls():
 
                 
     def scanCondI(self, l):
+        print("condi")
         pos = iscond(l)
         if pos[0] and search(l, "=") != -1:
             after = l[search(l, "=")+1:]
@@ -513,13 +514,18 @@ class ls():
             i = script[j]
             if search(i, '=') != -1 and search(i, "==") == -1:
                 self.scanVarI(i)
-            elif search(i, '=') != -1:
+            elif iscond(i)[0] == 1 and search(i, '=') != -1:
                 self.scanCondI(i)
             elif iscond(i)[0] == 1:
                 toreturn = self.condI(i, line2)
             else:
                 toreturn = self.exec(i, line2)
-            j += 1
+            if type(toreturn) == type([1, 1]):
+                if toreturn[0] == "__Python__.__ls__.__sys__.__goto__":
+                    j = toreturn[1]-line
+                    toreturn = None
+            else:
+                j += 1
         return toreturn
 
     def exec(self, function, line):
@@ -553,9 +559,9 @@ class ls():
                 elif func == 5:
                     f = 1
                 elif func == 6:
-                    self.exec_(i, self.label[parameters[0]], parameters, function, self.label[parameters[0]], i)
+                    toreturn = ["__Python__.__ls__.__sys__.__goto__", self.label[parameters[0]]]
                 elif func == 7:
-                    self.label[parameters[0]] = line
+                    self.label[parameters[0]] = line+1
                 break
         if func == "":
             print("Error, function not found `{}' at line {}".format(function, line))
