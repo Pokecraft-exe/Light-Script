@@ -20,6 +20,61 @@ elif
 while
 math var
 """
+def search_one(string, char):
+    isinstring = 0
+    first = ""
+    N = len(string)
+    for i in range(N):
+        if string[i] == '"':
+            if isinstring == 1:
+                if string[i] == first:
+                    isinstring = 0
+            else:
+                isinstring = 1
+                first = '"'
+        elif string[i] == "'":
+            if isinstring == 1:
+                if string[i] == first:
+                    isinstring = 0
+            else:
+                isinstring = 1
+                first = "'"
+        if string[i] == char and isinstring == 0:
+            return i
+    return -1
+
+
+def search(string, pattern):
+    isinstring = 0
+    first = ""
+    M = len(pattern)
+    N = len(string)
+    if len(pattern) == 1:
+        return search_one(string, pattern)
+    for i in range(N-M):
+        jj = 0
+        if string[i] == '"':
+            if isinstring == 1:
+                if string[i] == first:
+                    isinstring = 0
+            else:
+                isinstring = 1
+                first = '"'
+        elif string[i] == "'":
+            if isinstring == 1:
+                if string[i] == first:
+                    isinstring = 0
+            else:
+                isinstring = 1
+                first = "'"
+        for j in range(M):
+            if string[i + j] != pattern[j]:
+                break;
+            jj = j
+        if jj == (M-1) and isinstring == 0:
+            return i
+    return -1
+
 
 def lastline(string, sub):
     args = [""]
@@ -31,7 +86,7 @@ def lastline(string, sub):
         else:
             args[alist] = args[alist] + string[i]
     for i in range(len(args)-1):
-        if args[i].find(sub) != -1:
+        if search(args[i], sub) != -1:
             return i
 
 
@@ -80,21 +135,36 @@ def isstring(string):
 
 def isvar(string):
     pos = []
-    if string.find('%') != -1:
-        pos.append(string.find('%')+1)
-        string2 = string[string.find('%')+1:]
-        if string2.find('%') != -1:
-            pos.append(string2.find('%')+len(string)-len(string2))
+    if search(string, '%') != -1:
+        pos.append(search(string, '%')+1)
+        string2 = string[search(string, '%')+1:]
+        if search(string2, '%') != -1:
+            pos.append(search(string2, '%')+len(string)-len(string2))
             return (1, pos)
         else:
             return (0, (0,0))
     else:
         return (0, (0,0))
 
+
+def iscond(string):
+    pos = []
+    if search(string, '$') != -1:
+        pos.append(search(string, '$')+1)
+        string2 = string[search(string, '$')+1:]
+        if search(string2, '$') != -1:
+            pos.append(search(string2, '$')+len(string)-len(string2))
+            return (1, pos)
+        else:
+            return (0, (0,0))
+    else:
+        return (0, (0,0))
+
+    
 def isfunc(string):
     pos = []
-    if string.find('(') != -1:
-        if string.find(')') != -1:
+    if search(string, '(') != -1:
+        if search(string, ')') != -1:
             return 1
         else:
             return 0
@@ -129,15 +199,15 @@ def ismath(string):
 def findchar(lists, char):
   find=0
   for i in range(len(lists)-1):
-    if lists[(i)] == char:
+    if lists[i] == char:
       find=find+1
   return find
 
 
 def islist(string):
-    if string.find('[') != -1:
-        string = string[string.find('[')+1:]
-        if string.find(']') != -1:
+    if search(string, ']') != -1:
+        string = string[search(string, '[')+1:]
+        if search(string, ']') != -1:
             return 1
         else:
             return 0
@@ -178,9 +248,9 @@ def notab(string):
 def getlist(string, var):
     pos = []
     passed = 0
-    string = string[string.find('[')+1:]
+    string = string[search(string, '[')+1:]
     for i in range(findchar(string, ',')+1):
-        s = string.find(',')
+        s = search(string, ',')
         if s == -1:
             if passed >= 1:
                 return pos
@@ -193,51 +263,51 @@ def getlist(string, var):
         elif isstring(string[:s])[0]:
             f = isstring(string[:s])
             pos.append(string[f[1][0]:f[1][1]])
-            string = string[string.find(',')+1:]
+            string = string[search(string, ',')+1:]
             passstr = string
             passed = 0
         elif isvar(string[:s].replace(' ', ''))[0]:
             f = isvar(string[:s])
             pos.append(var[string[s[1][0]:s[1][1]]])
-            string = string[string.find(',')+1:]
+            string = string[search(string, ',')+1:]
             passstr = string
             passed = 0
         elif ismath(string[:s].replace(' ', '')):
             pos.append(eval(string[:s].replace(' ', '')))
-            string = string[string.find(',')+1:]
+            string = string[search(string, ',')+1:]
             passstr = string
             passed = 0
         elif isint(string[:s].replace(' ', '')):
             pos.append(int(string[:s].replace(' ', '')))
-            string = string[string.find(',')+1:]
+            string = string[search(string, ',')+1:]
             passstr = string
             passed = 0
         elif isfloat(string[:s].replace(' ', '')):
             pos.append(float(string[:s].replace(' ', '')))
-            string = string[string.find(',')+1:]
+            string = string[search(string, ',')+1:]
             passstr = string
             passed = 0
         else:
-            l = getlist(string[:string.find(']')+1], var)
+            l = getlist(string[:search(string, ']')+1], var)
             pos.append(l)
-            passstr = string[string.find(',')+1:]
+            passstr = string[search(string, ',')+1:]
             for j in range(len(pos[len(pos)-1])):
-                string = string[string.find(',')+1:]
+                string = string[search(string, ',')+1:]
     return pos
 
 
 def getParametersF(function):
     parameters = []
-    after = function[function.find("(")+1:-2]
+    after = function[search(function, "(")+1:-2]
     pos = 1
     while pos:
         if isvar(after)[0]:
             pos = 1
             s = isvar(after)
             parameters.append(after[s[1][0]:s[1][1]])
-            if after.find(",") == -1:
+            if search(after, ",") == -1:
                 after = after[:-1]
-            after = after[after.find(",")+1:]
+            after = after[search(after, ",")+1:]
         else:
             pos = 0
     return parameters
@@ -247,7 +317,7 @@ def getParameters(function, var):
     parameters = []
     pos=1
     l = function
-    after = l[l.find("(")+1:-1]
+    after = l[search(l, "(")+1:-1]
     while pos:
         if islist(after):
             pos = 1
@@ -273,16 +343,33 @@ def getParameters(function, var):
             parameters.append(float(after))
         else:
             pos = 0
-        if after.find(",") == -1:
+        if search(after, ",") == -1:
             after = after[:-1]
-        after = after[after.find(",")+1:]
+        after = after[search(after, ",")+1:]
     return parameters
+
+
+def scanCondType(after):
+    if search(after, "==") != -1:
+        return "=="
+    elif search(after, ">") != -1:
+        return ">="
+    elif search(after, "<") != -1:
+        return "<"
+    elif search(after, "!=") != -1:
+        return "!="
+    elif search(after, "<=") != -1:
+        return "<="
+    elif search(after, ">=") != -1:
+        return ">="
+    return None
 
 
 class ls():
     def __init__(self, script):
         self.script = []
         self.functions = {}
+        self.label = {}
         self.default_function = {}
         self.default_function[""] = -1
         self.default_function["print(%string%)"] = 0
@@ -290,90 +377,171 @@ class ls():
         self.default_function["os.file.read(%file%)"] = 2
         self.default_function["input(%string%)"] = 3
         self.default_function["return(%to_return%)"] = 4
-        self.default_function["if(%compare1%, %mode%, %compare2%)"] = 4
-        self.default_function["for(%number%)"] = 5
+        self.default_function["free(%variable%)"] = 5
+        self.default_function["goto(%name%)"] = 6
+        self.default_function["label(%name%)"] = 7
+        self.condition = {}
         self.var = {}
         for i in getAllLines(script):
-            if i.find('#') != -1:
-                if i[:i.find('#')] != '\n':
-                    self.script.append(i[:i.find('#')])
+            if search(i, '#') != -1:
+                if i[:search(i, '#')] != '\n':
+                    self.script.append(i[:search(i, '#')])
             else:
                 if i != '\n':
-                    self.script.append(i)
-            
+                    self.script.append(i)            
 
 
     def parse(self, script):
         for l in range(len(self.script)-1):
             subscript = self.script[l]
-            if subscript.find("def") != -1 and subscript.find(":") != -1:
-                self.functions[subscript[4:subscript.find(':')]] = l
+            if search(subscript, "def") != -1 and search(subscript, ":") != -1:
+                self.functions[subscript[4:search(subscript, ':')]] = l
 
 
+    def typescan(self, after):
+        if islist(after):
+            return getlist(after, self.var)
+        elif isfunc(after):
+            return self.exec(after, 0)
+        elif isstring(after)[0]:
+            s = isstring(after)
+            return after[s[1][0]:s[1][1]]
+        elif isvar(after)[0]:
+            s = isvar(after)
+            return self.var[after[s[1][0]:s[1][1]]]
+        elif ismath(after.replace(' ', '')):
+            return eval(after.replace(' ', ''))
+        elif isint(after.replace(' ', '')):
+            return int(after.replace(' ', ''))
+        elif isfloat(after.replace(' ', '')):
+            return float(after.replace(' ', ''))
+
+            
     def scanVarI(self, l):
         pos = isvar(l)
-        if pos[0] and l.find("=") != -1:
-            after = l[l.find("=")+1:]
+        if pos[0] and search(l, "=") != -1:
+            after = l[search(l, "=")+1:]
             posi = pos[1]
-            if islist(after): #no lists into lists into lists ex [[0, 3, [5, 6]], 0, 3]
-                self.var[l[posi[0]:posi[1]]] = getlist(after, self.var)
-            elif isfunc(after):
-                s = 1
-                self.var[l[posi[0]:posi[1]]] = self.exec(after, 0)
-            elif isstring(after)[0]:
-                s = isstring(after)
-                self.var[l[posi[0]:posi[1]]] = after[s[1][0]:s[1][1]]
-            elif isvar(after)[0]:
-                s = isvar(after)
-                self.var[l[posi[0]:posi[1]]] = self.var[after[s[1][0]:s[1][1]]]
-            elif ismath(after.replace(' ', '')):
-                self.var[l[posi[0]:posi[1]]] = eval(after.replace(' ', ''))
-            elif isint(after.replace(' ', '')):
-                self.var[l[posi[0]:posi[1]]] = int(after.replace(' ', ''))
-            elif isfloat(after.replace(' ', '')):
-                self.var[l[posi[0]:posi[1]]] = float(after.replace(' ', ''))
+            self.var[l[posi[0]:posi[1]]] = self.typescan(after)
 
+                
+    def scanCondI(self, l):
+        pos = iscond(l)
+        if pos[0] and search(l, "=") != -1:
+            after = l[search(l, "=")+1:]
+            posi = pos[1]
+            self.condition[l[posi[0]:posi[1]]] = notab(after)
+
+            
+    def condI(self, l, line):
+        pos = iscond(l)
+        iselse = 0
+        if pos[0]:
+            posi = pos[1]
+            f = l[posi[1]+1:]
+            if search(l, '!') == posi[0]:
+                iselse = 1
+                c = self.condition[l[posi[0]+1:posi[1]]]
+            else:
+                c = self.condition[l[posi[0]:posi[1]]]
+            after = self.typescan(c[search(c, "=")+1:])
+            before = self.typescan(c[:search(c, "=")])
+            if search(c, "==") != -1:
+                if before == after:
+                    if iselse == 0:
+                        return self.exec(f, line)
+                else:
+                    if iselse == 1:
+                        return self.exec(f, line)
+            elif search(c, ">") != -1:
+                if before == after:
+                    if iselse == 0:
+                        return self.exec(f, line)
+                else:
+                    if iselse == 1:
+                        return self.exec(f, line)
+            elif search(c, "<") != -1:
+                if before == after:
+                    if iselse == 0:
+                        return self.exec(f, line)
+                else:
+                    if iselse == 1:
+                        return self.exec(f, line)
+            elif search(c, "!=") != -1:
+                if before == after:
+                    if iselse == 0:
+                        return self.exec(f, line)
+                else:
+                    if iselse == 1:
+                        return self.exec(f, line)
+            elif search(c, "<=") != -1:
+                if before == after:
+                    if iselse == 0:
+                        return self.exec(f, line)
+                else:
+                    if iselse == 1:
+                        return self.exec(f, line)
+            elif search(c, ">=") != -1:
+                if before == after:
+                    if iselse == 0:
+                        return self.exec(f, line)
+                else:
+                    if iselse == 1:
+                        return self.exec(f, line)
+            
+
+    def exec_(self, i, line, parameters, function, defI = 0, end = "end def", zero = ""):
+        toreturn = None
+        j=0
+        if defI != 0:
+            i = defI
+            func = line
+        else:
+            func = self.functions[i]
+        line = func
+        script = self.script[func:]
+        if zero != "":
+            parametersF = getParametersF(zero)
+        else:
+            parametersF = getParametersF(script[0])
+            script = script[1:script.index(end)]
+        if len(parameters) > len(parametersF):
+            print("Error: too many parameters for function `{}', at line {}".format(function, line))
+            print(parameters, parametersF)
+        if len(parameters) < len(parametersF):
+            print("Error: not enough parameters for function `{}', at line {}".format(function, line))
+            return None
+        for i in range(len(parametersF)):
+            self.var[parametersF[i]] = parameters[i]
+        while j != len(script):
+            line2 = line + j
+            i = script[j]
+            if search(i, '=') != -1 and search(i, "==") == -1:
+                self.scanVarI(i)
+            elif search(i, '=') != -1:
+                self.scanCondI(i)
+            elif iscond(i)[0] == 1:
+                toreturn = self.condI(i, line2)
+            else:
+                toreturn = self.exec(i, line2)
+            j += 1
+        return toreturn
 
     def exec(self, function, line):
         func = ""
         function = notab(function)
         toreturn = None
         parameters = getParameters(function, self.var)
-        j=0
         for i in self.functions:
-            nf = i[:i.find("(")+1]+i[-1:]
-            tcf = function[:function.find("(")+1]+function[-1:]
+            nf = i[:search(i, "(")+1]+i[-1:]
+            tcf = function[:search(function, "(")+1]+function[-1:]
             if nf == tcf:
-                func = self.functions[i]
-                line = func
-                script = self.script[func:]
-                parametersF = getParametersF(script[0])
-                script = script[1:script.index("end def")]
-                if len(parameters) > len(parametersF):
-                    print("Warning: too many parameters for function `{}'".format(function))
-                if len(parameters) < len(parametersF):
-                    print("Error: not enough parameters for function `{}'".format(function))
-                    return None
-                for i in range(len(parametersF)):
-                    self.var[parametersF[i]] = parameters[i]
-                while j != len(script):
-                    i = script[j]
-                    line2 = line + j
-                    if i.find('=') != -1:
-                        self.scanVarI(i)
-                    else:
-                        toreturn = self.exec(notab(i), line2)
-                        if toreturn == ["__proc__", "__lScript__", "__if__", "__BreaK__"]:
-                            for u in range(len(script)):
-                                if script[u].find("end") != -1 and script[u].find("if") != -1:
-                                    j = u
-                        #toreturn = None
-                    j += 1
-                            
+                func = i
+                toreturn = self.exec_(i, line, parameters, function)
                 break
         for i in self.default_function:
-            nf = i[:i.find("(")+1]+i[-1:]
-            tcf = function[:function.find("(")+1]+function[-1:]
+            nf = i[:search(i, "(")+1]+i[-1:]
+            tcf = function[:search(function, "(")+1]+function[-1:]
             if nf == tcf:
                 func = i
                 func = self.default_function[func]
@@ -388,158 +556,24 @@ class ls():
                 elif func == 4:
                     toreturn = parameters[0]
                 elif func == 5:
-                    if parameters [1] == "==":
-                        if parameters[0] == parameters[2]:
-                            script = self.script[func:]
-                            parametersF = getParametersF(script[0])
-                            script = script[1:script.index("end def")]
-                            if len(parameters) > len(parametersF):
-                                print("Warning: too many parameters for function `{}'".format(function))
-                            if len(parameters) < len(parametersF):
-                                print("Error: not enough parameters for function `{}'".format(function))
-                                return None
-                            for i in range(len(parametersF)):
-                                self.var[parametersF[i]] = parameters[i]
-                            while j != len(script):
-                                i = script[j]
-                                if i.find('=') != -1:
-                                    self.scanVarI(i)
-                                else:
-                                    toreturn = self.exec(notab(i))
-                                    if toreturn == ["__proc__", "__lScript__", "__if__", "__BreaK__"]:
-                                        for u in range(len(script)):
-                                            if script[u].find("end") != -1 and script[u].find("if") != -1:
-                                                j = u
-                                j += 1
-                    elif parameters [1] == ">":
-                        if parameters[0] > parameters[2]:
-                            script = self.script[func:]
-                            parametersF = getParametersF(script[0])
-                            script = script[1:script.index("end def")]
-                            if len(parameters) > len(parametersF):
-                                print("Warning: too many parameters for function `{}'".format(function))
-                            if len(parameters) < len(parametersF):
-                                print("Error: not enough parameters for function `{}'".format(function))
-                                return None
-                            for i in range(len(parametersF)):
-                                self.var[parametersF[i]] = parameters[i]
-                            while j != len(script):
-                                i = script[j]
-                                if i.find('=') != -1:
-                                    self.scanVarI(i)
-                                else:
-                                    toreturn = self.exec(notab(i))
-                                    if toreturn == ["__proc__", "__lScript__", "__if__", "__BreaK__"]:
-                                        for u in range(len(script)):
-                                            if script[u].find("end") != -1 and script[u].find("if") != -1:
-                                                j = u
-                                j += 1
-                    elif parameters [1] == "<":
-                        if parameters[0] < parameters[2]:
-                            script = self.script[func:]
-                            parametersF = getParametersF(script[0])
-                            script = script[1:script.index("end def")]
-                            if len(parameters) > len(parametersF):
-                                print("Warning: too many parameters for function `{}'".format(function))
-                            if len(parameters) < len(parametersF):
-                                print("Error: not enough parameters for function `{}'".format(function))
-                                return None
-                            for i in range(len(parametersF)):
-                                self.var[parametersF[i]] = parameters[i]
-                            while j != len(script):
-                                i = script[j]
-                                if i.find('=') != -1:
-                                    self.scanVarI(i)
-                                else:
-                                    toreturn = self.exec(notab(i))
-                                    if toreturn == ["__proc__", "__lScript__", "__if__", "__BreaK__"]:
-                                        for u in range(len(script)):
-                                            if script[u].find("end") != -1 and script[u].find("if") != -1:
-                                                j = u
-                                j += 1
-                    elif parameters [1] == "!=":
-                        if parameters[0] != parameters[2]:
-                            script = self.script[func:]
-                            parametersF = getParametersF(script[0])
-                            script = script[1:script.index("end def")]
-                            if len(parameters) > len(parametersF):
-                                print("Warning: too many parameters for function `{}'".format(function))
-                            if len(parameters) < len(parametersF):
-                                print("Error: not enough parameters for function `{}'".format(function))
-                                return None
-                            for i in range(len(parametersF)):
-                                self.var[parametersF[i]] = parameters[i]
-                            while j != len(script):
-                                i = script[j]
-                                if i.find('=') != -1:
-                                    self.scanVarI(i)
-                                else:
-                                    toreturn = self.exec(notab(i))
-                                    if toreturn == ["__proc__", "__lScript__", "__if__", "__BreaK__"]:
-                                        for u in range(len(script)):
-                                            if script[u].find("end") != -1 and script[u].find("if") != -1:
-                                                j = u
-                                j += 1
-                    elif parameters [1] == "<=":
-                        if parameters[0] <= parameters[2]:
-                            script = self.script[func:]
-                            parametersF = getParametersF(script[0])
-                            script = script[1:script.index("end def")]
-                            if len(parameters) > len(parametersF):
-                                print("Warning: too many parameters for function `{}'".format(function))
-                            if len(parameters) < len(parametersF):
-                                print("Error: not enough parameters for function `{}'".format(function))
-                                return None
-                            for i in range(len(parametersF)):
-                                self.var[parametersF[i]] = parameters[i]
-                            while j != len(script):
-                                i = script[j]
-                                if i.find('=') != -1:
-                                    self.scanVarI(i)
-                                else:
-                                    toreturn = self.exec(notab(i))
-                                    if toreturn == ["__proc__", "__lScript__", "__if__", "__BreaK__"]:
-                                        for u in range(len(script)):
-                                            if script[u].find("end") != -1 and script[u].find("if") != -1:
-                                                j = u
-                                j += 1
-                    elif parameters [1] == ">=":
-                        if parameters[0] >= parameters[2]:
-                            script = self.script[func:]
-                            parametersF = getParametersF(script[0])
-                            script = script[1:script.index("end def")]
-                            if len(parameters) > len(parametersF):
-                                print("Warning: too many parameters for function `{}'".format(function))
-                            if len(parameters) < len(parametersF):
-                                print("Error: not enough parameters for function `{}'".format(function))
-                                return None
-                            for i in range(len(parametersF)):
-                                self.var[parametersF[i]] = parameters[i]
-                            while j != len(script):
-                                i = script[j]
-                                if i.find('=') != -1:
-                                    self.scanVarI(i)
-                                else:
-                                    toreturn = self.exec(notab(i))
-                                    if toreturn == ["__proc__", "__lScript__", "__if__", "__BreaK__"]:
-                                        for u in range(len(script)):
-                                            if script[u].find("end") != -1 and script[u].find("if") != -1:
-                                                j = u
-                                j += 1
+                    f = 1
+                elif func == 6:
+                    self.exec_(i, self.label[parameters[0]], parameters, function, self.label[parameters[0]], i)
+                elif func == 7:
+                    self.label[parameters[0]] = line
                 break
         if func == "":
-            print("Error, function not found `{}'".format(function))
+            print("Error, function not found `{}' at line {}".format(function, line))
             return None
         return toreturn
 
 
 def main():
-    print(argv)
-    reader = ls(read("test.ls"))
-    reader.parse(read("test.ls"))
+    #print(argv)
+    reader = ls(read(argv[1]))
+    reader.parse(read(argv[1]))
     reader.var["__Python__.__LS__.__sys__.__argv__"] = argv
     reader.exec("start(%__Python__.__LS__.__sys__.__argv__%)", 0)
-    #print(reader.var)
     
 
 main()
