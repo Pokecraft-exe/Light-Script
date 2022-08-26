@@ -5,12 +5,14 @@ def read(file):
         c = f.read()
     return c
 
-
 def write(file, towrite):
     with open(file, 'w') as f:
         f.write(towrite)
 
-        
+"""
+TODO:
+for
+"""
 def search_one(string, char):
     isinstring = 0
     first = ""
@@ -189,11 +191,12 @@ def replacevar(string, var):
 
 
 def ismath(string, var):
-    try:
-        s = eval(replacevar(string, var))
-        return 1
-    except:
-        return 0
+    if scanOperator != -1:
+        try:
+            s = eval(replacevar(string, var))
+            return 1
+        except:
+            return 0
 
 
 def findchar(lists, char):
@@ -205,14 +208,16 @@ def findchar(lists, char):
 
 
 def islist(string):
+    pos = 0
     if search(string, ']') != -1:
+        pos = search(string, ']')
         string = string[search(string, '[')+1:]
         if search(string, ']') != -1:
-            return 1
+            return (1, (pos, search(string, ']')))
         else:
-            return 0
+            return (0, (0, 0))
     else:
-        return 0
+        return (0, (0, 0))
 
 
 def notab(string):
@@ -266,14 +271,14 @@ def getlist(string, var):
             string = string[search(string, ',')+1:]
             passstr = string
             passed = 0
-        elif isvar(string[:s].replace(' ', ''))[0]:
-            f = isvar(string[:s])
-            pos.append(var[string[s[1][0]:s[1][1]]])
+        elif ismath(string[:s].replace(' ', ''), var):
+            pos.append(eval(replacevar(string[:s], var)))
             string = string[search(string, ',')+1:]
             passstr = string
             passed = 0
-        elif ismath(string[:s].replace(' ', '')):
-            pos.append(eval(string[:s].replace(' ', '')))
+        elif isvar(string[:s].replace(' ', ''))[0]:
+            f = isvar(string[:s])
+            pos.append(var[string[s[1][0]:s[1][1]]])
             string = string[search(string, ',')+1:]
             passstr = string
             passed = 0
@@ -319,7 +324,7 @@ def getParameters(function, var):
     l = function
     after = l[search(l, "(")+1:-1]
     while pos:
-        if islist(after):
+        if islist(after)[0] and (isvar(after)[1][0] > islist(after)[1][0] or isvar(after)[0] == 0):
             pos = 1
             parameters.append(getlist(after, var))
         elif isstring(after)[0]:
@@ -328,13 +333,21 @@ def getParameters(function, var):
             parameters.append(after[s[1][0]:s[1][1]])
         elif isfunc(after):
             pos = 1
+        elif ismath(after, var):
+            pos = 1
+            parameters.append(eval(replacevar(after, var)))
+        elif isvar(after)[0]:
+            if isvar(after)[1][0] < islist(after)[1][0]:
+                index = getlist(after)
+                s = isvar(after)
+                parameters.append(var[after[s[1][0]:s[1][1]]][index])
+            else:
+                s = isvar(after)
+                parameters.append(var[after[s[1][0]:s[1][1]]])
         elif isvar(after)[0]:
             pos = 1
             s = isvar(after)
             parameters.append(var[after[s[1][0]:s[1][1]]])
-        elif ismath(after, var):
-            pos = 1
-            parameters.append(eval(after))
         elif isint(after):
             pos = 1
             parameters.append(int(after))
@@ -419,8 +432,8 @@ class ls():
 
 
     def typescan(self, after):
-        if islist(after):
-            return getlist(after, self.var)
+        if islist(after)[0] and (isvar(after)[1][0] > islist(after)[1][0] or isvar(after)[0] == 0):
+                return getlist(after, self.var)
         elif isfunc(after):
             return self.exec(after, 0)
         elif isstring(after)[0]:
@@ -429,6 +442,10 @@ class ls():
         elif ismath(after, self.var):
             return eval(replacevar(after, self.var))
         elif isvar(after)[0]:
+            if isvar(after)[1][0] < islist(after)[1][0]:
+                index = getlist(after)
+                s = isvar(after)
+                return self.var[after[s[1][0]:s[1][1]]][index]
             s = isvar(after)
             return self.var[after[s[1][0]:s[1][1]]]
         elif isint(after):
