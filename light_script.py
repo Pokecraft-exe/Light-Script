@@ -9,10 +9,7 @@ def write(file, towrite):
     with open(file, 'w') as f:
         f.write(towrite)
 
-"""
-TODO:
-for
-"""
+
 def search_one(string, char):
     isinstring = 0
     first = ""
@@ -271,24 +268,24 @@ def getlist(string, var):
             string = string[search(string, ',')+1:]
             passstr = string
             passed = 0
-        elif ismath(string[:s].replace(' ', ''), var):
+        elif ismath(string[:s], var):
             pos.append(eval(replacevar(string[:s], var)))
             string = string[search(string, ',')+1:]
             passstr = string
             passed = 0
-        elif isvar(string[:s].replace(' ', ''))[0]:
+        elif isvar(string[:s])[0]:
             f = isvar(string[:s])
-            pos.append(var[string[s[1][0]:s[1][1]]])
+            pos.append(var[string[f[1][0]:f[1][1]]])
             string = string[search(string, ',')+1:]
             passstr = string
             passed = 0
-        elif isint(string[:s].replace(' ', ''), var):
-            pos.append(int(string[:s].replace(' ', '')))
+        elif isint(string[:s]):
+            pos.append(int(string[:s]))
             string = string[search(string, ',')+1:]
             passstr = string
             passed = 0
-        elif isfloat(string[:s].replace(' ', '')):
-            pos.append(float(string[:s].replace(' ', '')))
+        elif isfloat(string[:s]):
+            pos.append(float(string[:s]))
             string = string[search(string, ',')+1:]
             passstr = string
             passed = 0
