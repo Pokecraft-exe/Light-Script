@@ -335,16 +335,12 @@ def getParameters(function, var):
             parameters.append(eval(replacevar(after, var)))
         elif isvar(after)[0]:
             if isvar(after)[1][0] < islist(after)[1][0]:
-                index = getlist(after)
+                index = getlist(after, var)
                 s = isvar(after)
                 parameters.append(var[after[s[1][0]:s[1][1]]][index])
             else:
                 s = isvar(after)
                 parameters.append(var[after[s[1][0]:s[1][1]]])
-        elif isvar(after)[0]:
-            pos = 1
-            s = isvar(after)
-            parameters.append(var[after[s[1][0]:s[1][1]]])
         elif isint(after):
             pos = 1
             parameters.append(int(after))
