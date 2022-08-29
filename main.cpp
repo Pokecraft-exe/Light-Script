@@ -1,24 +1,15 @@
 #include "Light Script.h"
 using namespace std;
 
-
-string any_to_string(any some_any) {
-	std::stringstream ss;
-	// Since the list is a data structure we have to add each element one by one 
-	ss << some_any.first.first << " " << some_any.first.second << " " << some_any.second.first;
-	for (auto val : some_any.second.second) {
-		ss << " " << val;
-	}
-	return ss.str();
-}
-void replaceAll(string& s, const string& search, const string& replace) {
-    for (size_t pos = 0; ; pos += replace.length()) {
+void replaceAll(string& s, const string& search, Any replace) {
+	string stringed = replace.as<string>();
+    for (size_t pos = 0; ; pos += stringed.length()) {
         // Locate the substring to replace
         pos = s.find(search, pos);
         if (pos == string::npos) break;
         // Replace by erasing and inserting
         s.erase(pos, search.length());
-        s.insert(pos, replace);
+        s.insert(pos, stringed);
     }
 }
 
@@ -334,14 +325,14 @@ string replacevar(string s, dict var) {
     int* posi = getvar(s);
     while (i) {
         string toreplace = s.substr(posi[0] - 1, posi[1] + 1);
-        replaceAll(s, toreplace, any_to_string(var[toreplace.substr(1, toreplace.length() - 2)]));
+        replaceAll(s, toreplace, var[toreplace.substr(1, toreplace.length() - 2)]);
         i = isvar(s);
         posi = getvar(s);
     }
     return s;
 }
 
-any scanCondType(string after) {
+string scanCondType(string after) {
     if (after.find("==") != string::npos) {
         return "==";
     }
@@ -361,11 +352,11 @@ any scanCondType(string after) {
         return ">=";
     }
     else {
-        return -1;
+        return "-1";
     }
 }
 
-any scanOperator(string after) {
+string scanOperator(string after) {
     if (after.find("**") != string::npos) {
         return "**";
     }
@@ -391,7 +382,7 @@ any scanOperator(string after) {
         return "=";
     }
     else {
-        return -1;
+        return "-1";
     }
 }
 
@@ -431,7 +422,7 @@ int calculate(string s) {
 
 bool ismath(string str, dict var) {
     string s;
-    if (scanOperator(str) != -1) {
+    if (scanOperator(str) != "-1") {
         try {
             s = calculate(replacevar(str, var));
             return 1;
@@ -488,12 +479,12 @@ int* islist(string str)
         }
         else
         {
-            return (0, 0);
+            return (int*)(0, 0);
         }
     }
     else
     {
-        return (0, 0);
+        return (int*)(0, 0);
     }
 }
 
@@ -564,13 +555,13 @@ list getlist(string str, dict var) {
         }
         else if (isstring(str.substr(0, s))) {
             int* f = getstring(str.substr(0, s));
-            pos.push_back(str.substr(f[0], f[1]));
+            pos.push_back((Any)str.substr(f[0], f[1]));
             str = str.substr(search(str, ",") + 1);
             string passstr = str;
             passed = 0;
         }
         else if (ismath(str.substr(0, s), var)) {
-            pos.push_back(calculate(replacevar(str.substr(0, s), var)));
+            pos.push_back((Any)calculate(replacevar(str.substr(0, s), var)));
             str = str.substr(search(str, ",") + 1);
             string passstr = str;
             passed = 0;
@@ -583,13 +574,13 @@ list getlist(string str, dict var) {
             passed = 0;
         }
         else if (isint(str.substr(0, s))) {
-            pos.push_back(stoi(str.substr(0, s)));
+            pos.push_back((Any)stoi(str.substr(0, s)));
             str = str.substr(search(str, ",") + 1);
             string passstr = str;
             passed = 0;
         }
         else if (isfloat(str.substr(0, s))) {
-            pos.push_back(stof(str.substr(0, s)));
+            pos.push_back((Any)stof(str.substr(0, s)));
             str = str.substr(search(str, ",") + 1);
             string passstr = str;
             passed = 0;
@@ -598,7 +589,7 @@ list getlist(string str, dict var) {
             list l = getlist(str.substr(0, search(str, "]") + 1), var);
             pos.push_back(l);
             string passstr = str.substr(search(str, ",") + 1);
-            for (int j; j <= pos[pos.size() - 1].size(); j++) {
+            for (int j; j <= l.size(); j++) {
                 str = str.substr(search(str, ",") + 1);
             }
         }
@@ -650,18 +641,25 @@ list getParameters(string function, dict var) {
             parameters.push_back(calculate((replacevar(after, var))));
         }
         else if (isint(after)) {
-            parameters.push_back(std::stoi(after));
+            parameters.push_back(stoi(after));
         }
         else if (isfloat(after)) {
-            parameters.push_back(std::stof(after));
+            parameters.push_back(stof(after));
         }
         else if (isstring(after)) {
             parameters.push_back(after.substr(1, after.length() - 2));
         }
         else if (isvar(after)) {
-            std::string varName = after.substr(0, after.find("["));
-            std::string index = after.substr(after.find("[") + 1, after.find("]") - after.find("[") - 1);
-            parameters.push_back(var.at(varName)[std::stoi(index)]);
+            if (getvar(after)[0] < islist(after)[0]){
+                int index = getlist(after, var)[0].as<int>();
+                int* s = getvar(after);
+                list l_ = var[after.substr(s[0], s[1])].as<list>();
+                parameters.push_back(l_[index]);
+			}
+            else {
+                int* s = getvar(after);
+                parameters.push_back(var[after.substr(s[0], s[1])]);
+			}
         }
         else {
             pos = 0;
@@ -721,7 +719,7 @@ void ls::parse() {
     }
 }
 
-any ls::typescan(string after) {
+Any ls::typescan(string after) {
     if (bislist(after) && (getvar(after)[0] > islist(after)[0] || isvar(after) == 0)) {
         return getlist(after, var);
     } else if (isfunc(after)) {
@@ -733,9 +731,10 @@ any ls::typescan(string after) {
         return calculate(replacevar(after, var));
     } else if (isvar(after)) {
         if (getvar(after)[0] < islist(after)[0]){
-            list index = getlist(after, var);
+            int index = getlist(after, var)[0].as<int>();
             int* s = getvar(after);
-            return var[after.substr(s[0], s[1])][index];
+            list l_ = var[after.substr(s[0], s[1])].as<list>();
+            return l_[index];
         }
         int* s = getvar(after);
         return var[after.substr(s[0], s[1])];
@@ -759,7 +758,7 @@ void ls::scanCondI(string l) {
     condition[l.substr(pos[0], pos[1])] = notab(after);
 }
 
-any ls::condI(string l, int line) {
+Any ls::condI(string l, int line) {
     bool pos = iscond(l);
     int* posi = getcond(l);
     bool iselse = false;
@@ -774,74 +773,175 @@ any ls::condI(string l, int line) {
         else {
             c = condition[l.substr(posi[0], posi[1])];
         }
-        any after = typescan(c.substr(search(c, "=") + 1));
-        any before = typescan(c.substr(0, search(c, "=")));
-        if (search(c, "==") != -1) {
-            if (before == after) {
-                if (!iselse) {
-                    return exec_(f, line, {}, f, 1);
-                }
-            } else {
-                if (iselse) {
-                    return exec_(f, line, {}, f, 1);
-                }
-            }
-        } else if (search(c, ">") != -1) {
-            if (before > after) {
-                if (!iselse) {
-                    return exec_(f, line, {}, f, 1);
-                }
-            } else {
-                if (iselse) {
-                    return exec_(f, line, {}, f, 1);
-                }
-            }
-        } else if (search(c, "<") != -1) {
-            if (before < after) {
-                if (!iselse) {
-                    return exec_(f, line, {}, f, 1);
-                }
-            } else {
-                if (iselse) {
-                    return exec_(f, line, {}, f, 1);
-                }
-            }
-        } else if (search(c, "!=") != -1) {
-            if (before != after) {
-                if (!iselse) {
-                    return exec_(f, line, {}, f, 1);
-                }
-            } else {
-                if (iselse) {
-                    return exec_(f, line, {}, f, 1);
-                }
-            }
-        } else if (search(c, "<=") != -1) {
-            if (before <= after) {
-                if (!iselse) {
-                    return exec_(f, line, {}, f, 1);
-                }
-            } else {
-                if (iselse) {
-                    return exec_(f, line, {}, f, 1);
-                }
-            }
-        } else if (search(c, ">=") != -1) {
-            if (before < after) {
-                if (!iselse) {
-                    return exec_(f, line, {}, f, 1);
-                }
-            } else {
-                if (iselse) {
-                    return exec_(f, line, {}, f, 1);
-                }
-            }
-        }
+        Any after = typescan(c.substr(search(c, "=") + 1));
+        Any before = typescan(c.substr(0, search(c, "=")));
+        if (before.is<int>() && after.is<int>()) {
+        	int after_ = after.as<int>();
+        	int before_ = before.as<int>();
+        	if (search(c, "==") != -1) {
+	            if (before_ == after_) {
+    	            if (!iselse) {
+        	            return exec_(f, line, {}, f, 1);
+            	    }
+	            } else {
+	                if (iselse) {
+	                    return exec_(f, line, {}, f, 1);
+	                }
+	            }
+	        } else if (search(c, ">") != -1) {
+	            if (before_ > after_) {
+	                if (!iselse) {
+ 	                   return exec_(f, line, {}, f, 1);
+    	            }
+        	    } else {
+            	    if (iselse) {
+                	    return exec_(f, line, {}, f, 1);
+	                }
+    	        }
+        	} else if (search(c, "<") != -1) {
+            	if (before_ < after_) {
+                	if (!iselse) {
+                    	return exec_(f, line, {}, f, 1);
+	                }
+    	        } else {
+        	        if (iselse) {
+            	        return exec_(f, line, {}, f, 1);
+                	}
+	            }
+    	    } else if (search(c, "!=") != -1) {
+        	    if (before_ != after_) {
+            	    if (!iselse) {
+                	    return exec_(f, line, {}, f, 1);
+	                }
+    	        } else {
+        	        if (iselse) {
+            	        return exec_(f, line, {}, f, 1);
+                	}
+	            }
+    	    } else if (search(c, "<=") != -1) {
+        	    if (before_ <= after_) {
+            	    if (!iselse) {
+                	    return exec_(f, line, {}, f, 1);
+	                }
+    	        } else {
+        	        if (iselse) {
+            	        return exec_(f, line, {}, f, 1);
+                	}
+	            }
+    	    } else if (search(c, ">=") != -1) {
+        	    if (before_ >= after_) {
+            	    if (!iselse) {
+                	    return exec_(f, line, {}, f, 1);
+	                }
+    	        } else {
+        	        if (iselse) {
+            	        return exec_(f, line, {}, f, 1);
+                	}
+            	}
+        	}
+		} else if (before.is<float>() && after.is<float>()) {
+			float after_ = after.as<float>();
+        	float before_ = before.as<float>();
+        	if (search(c, "==") != -1) {
+	            if (before_ == after_) {
+    	            if (!iselse) {
+        	            return exec_(f, line, {}, f, 1);
+            	    }
+	            } else {
+	                if (iselse) {
+	                    return exec_(f, line, {}, f, 1);
+	                }
+	            }
+	        } else if (search(c, ">") != -1) {
+	            if (before_ > after_) {
+	                if (!iselse) {
+ 	                   return exec_(f, line, {}, f, 1);
+    	            }
+        	    } else {
+            	    if (iselse) {
+                	    return exec_(f, line, {}, f, 1);
+	                }
+    	        }
+        	} else if (search(c, "<") != -1) {
+            	if (before_ < after_) {
+                	if (!iselse) {
+                    	return exec_(f, line, {}, f, 1);
+	                }
+    	        } else {
+        	        if (iselse) {
+            	        return exec_(f, line, {}, f, 1);
+                	}
+	            }
+    	    } else if (search(c, "!=") != -1) {
+        	    if (before_ != after_) {
+            	    if (!iselse) {
+                	    return exec_(f, line, {}, f, 1);
+	                }
+    	        } else {
+        	        if (iselse) {
+            	        return exec_(f, line, {}, f, 1);
+                	}
+	            }
+    	    } else if (search(c, "<=") != -1) {
+        	    if (before_ <= after_) {
+            	    if (!iselse) {
+                	    return exec_(f, line, {}, f, 1);
+	                }
+    	        } else {
+        	        if (iselse) {
+            	        return exec_(f, line, {}, f, 1);
+                	}
+	            }
+    	    } else if (search(c, ">=") != -1) {
+        	    if (before_ >= after_) {
+            	    if (!iselse) {
+                	    return exec_(f, line, {}, f, 1);
+	                }
+    	        } else {
+        	        if (iselse) {
+            	        return exec_(f, line, {}, f, 1);
+                	}
+            	}
+        	}			
+		} else if (before.is<string>() && after.is<string>()) {
+			string after_ = after.as<string>();
+        	string before_ = before.as<string>();
+        	if (search(c, "==") != -1) {
+	            if (before_ == after_) {
+    	            if (!iselse) {
+        	            return exec_(f, line, {}, f, 1);
+            	    }
+	            } else {
+	                if (iselse) {
+	                    return exec_(f, line, {}, f, 1);
+	                }
+	            }
+	        } else if (search(c, "!=") != -1) {
+        	    if (before_ != after_) {
+            	    if (!iselse) {
+                	    return exec_(f, line, {}, f, 1);
+	                }
+    	        } else {
+        	        if (iselse) {
+            	        return exec_(f, line, {}, f, 1);
+                	}
+	            }
+    	    } else {
+    	    	cout << "Error at line " << line << " can't use other operator than '==', '!=' on strings.";
+    	    	return 0;
+			}
+		} else if (before.is<list>() || after.is<list>()) {
+			cout << "Error at line " << line << " can't compare list." << endl;
+			return 0;
+		} else {
+			cout << "Error at line " << line << "can't compare two different types." << endl;
+			return 0;
+		}
     }
 }
 
-any ls::exec_(string i, int line, list parameters, string function, bool one = 0) {
-    any toreturn;
+Any ls::exec_(string i, int line, list parameters, string function, bool one) {
+    Any toreturn;
     if (!one) {
         int j = 0;
         string end = "end def";
@@ -849,7 +949,6 @@ any ls::exec_(string i, int line, list parameters, string function, bool one = 0
         int line = func;
         vector<string> script_ = sub(script, func, script.size());
         list parametersF = getParametersF(script[0]);
-        vector<string>::iterator itr = find(script_.begin(), script_.end(), end);
         script_ = sub(script_, 1, index(script_, end));
         if (parameters.size() > parametersF.size()) {
             cout << "Error: too many parameters for function `" << function << "', at line " << line << endl;
@@ -864,10 +963,10 @@ any ls::exec_(string i, int line, list parameters, string function, bool one = 0
         while (j != script_.size()) {
             int line2 = line + j;
             string i = script_[j];
-            if (!iscond(i) && isvar(i) && scanOperator(i) != -1) {
+            if (!iscond(i) && isvar(i) && scanOperator(i) != "-1") {
                 scanVarI(i);
             }
-            else if (iscond(i) && scanCondType(i) != -1) {
+            else if (iscond(i) && scanCondType(i) != "-1") {
                 scanCondI(i);
             }
             else if (iscond(i)) {
@@ -877,8 +976,8 @@ any ls::exec_(string i, int line, list parameters, string function, bool one = 0
                 toreturn = exec(i, line2);
             }
             try {
-                if (toreturn[0] == "__Python__.__ls__.__sys__.__ goto__") {
-                    j = toreturn[1] - line;
+                if (toreturn.as<list>()[0].as<string>() == "__Python__.__ls__.__sys__.__ goto__") {
+                    int j = toreturn.as<list>()[1].as<int>() - line;
                     toreturn = nullptr;
                 }
             }
@@ -890,9 +989,9 @@ any ls::exec_(string i, int line, list parameters, string function, bool one = 0
     }
     else {
         int line2 = line;
-        if (!iscond(i) && isvar(i) && scanOperator(i) != -1) {
+        if (!iscond(i) && isvar(i) && scanOperator(i) != "-1") {
             scanVarI(i);
-        } else if (iscond(i) && scanCondType(i) != -1) {
+        } else if (iscond(i) && scanCondType(i) != "-1") {
             scanCondI(i);
         } else if (iscond(i)) {
             toreturn = condI(i, line2);
@@ -903,11 +1002,11 @@ any ls::exec_(string i, int line, list parameters, string function, bool one = 0
     return toreturn; 
 }
 
-any ls::exec(string function, int line) {
-    any func = "";
+Any ls::exec(string function, int line) {
+    Any func = "";
     string function_ = notab(function);
-    any toreturn;
-    any parameters = getParameters(function, var);
+    Any toreturn;
+    Any parameters = getParameters(function, var);
     for (std::map<string, int>::iterator it = functions.begin(); it != functions.end(); ++it) {
         string i = it->first;
         string nf = i.substr(0, search(i, "(") + 1) + i.substr(-1);
@@ -925,35 +1024,39 @@ any ls::exec(string function, int line) {
         if (nf == tcf) {
             func = i;
             func = default_function[func];
-            if (func == 0) {
-                cout << parameters[0];
+            if (func.as<int>() == 0) {
+                parameters.as<list>()[0].print();
+                cout << endl;
             }
-            else if (func == 1) {
-                write((string)parameters[0], (string)parameters[1]);
+            else if (func.as<int>() == 1) {
+                write(parameters.as<list>()[0].as<string>(), parameters.as<list>()[1].as<string>());
             }
-            else if (func == 2) {
-                toreturn = read((string)parameters[0]);
+            else if (func.as<int>() == 2) {
+                toreturn = read(parameters.as<list>()[0].as<string>());
             }
-            else if (func == 3) {
-                cout << parameters[0];
-                cin >> toreturn;
+            else if (func.as<int>() == 3) {
+                parameters.as<list>()[0].print();
+                string s;
+                cin >> s;
+				toreturn = s;
+                cout << endl;
             }
-            else if (func == 4) {
-                toreturn = parameters[0];
+            else if (func.as<int>() == 4) {
+                toreturn = parameters.as<list>()[0];
             }
-            else if (func == 5) {
+            else if (func.as<int>() == 5) {
                 bool f = 1;
             }
-            else if (func == 6) {
-                toreturn = { "__Python__.__ls__.__sys__.__goto__", label[parameters[0]] };
+            else if (func.as<int>() == 6) {
+            	toreturn = 1;
             }
-            else if (func == 7) {
-                label[parameters[0]] = line + 1;
+            else if (func.as<int>() == 7) {
+                label[parameters.as<list>()[0].as<string>()] = line + 1;
             }
             break;
         } 
     }
-    if (func == "") {
+    if (func.as<string>() == "") {
         cout << "Error, function not found `" << function << "' at line " << line << endl;
             return nullptr;
     }
