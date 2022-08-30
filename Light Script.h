@@ -110,7 +110,7 @@ struct Any
         return *this;
     }
     
-    void* print() {
+    void print() {
     	if (is<int>()) {cout << as<int>();}
 		if (is<float>()) {cout << as<float>();}
 		if (is<string>()) {cout << as<string>();}
@@ -187,10 +187,10 @@ typedef vector<Any> list;
 typedef map<string, Any> dict;
 
 void replaceAll(string& s, const string& search, const string& replace);
-string read(string file);
+vector<string> read(string file);
 void write(string file, string towrite);
 int search_one(string str, char chr);
-int search(const string& str, const string& pattern);
+int search(string str, string pattern);
 int lastline(string s, string sub);
 string getline(string s, int line);
 vector<string> getAllLines(string s);
@@ -226,7 +226,7 @@ private:
 public:
     dict var;
 
-    ls(string script);
+    ls(vector<string> script_);
     void parse();
     Any typescan(string after);
     void scanVarI(string l);
