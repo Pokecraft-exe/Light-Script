@@ -1,6 +1,14 @@
 #include "Light Script.h"
 using namespace std;
 
+bool isdebug = false;
+
+void debug(string message) {
+	if (isdebug) {
+		cout << "C++ Debugging message: `" << message << "'." << endl;
+	}
+}
+
 void replaceAll(string& s, const string& search, Any replace) {
 	string stringed = replace.as<string>();
     for (size_t pos = 0; ; pos += stringed.length()) {
@@ -13,15 +21,25 @@ void replaceAll(string& s, const string& search, Any replace) {
     }
 }
 
-string read(string file) {
-    std::ifstream myfile; myfile.open(file.c_str());
+vector<string> read(string file) {
+	debug("read()");
+    std::ifstream newfile; newfile.open(file.c_str(), ios::in);
+    vector<string> c_;
     string c;
-    myfile >> c;
-    return c;
+	if (newfile.is_open()){   //checking whether the file is open
+      while(getline(newfile, c)){ //read data from file object and put it into string.
+         c_.push_back(c + "\n"); //print the data of the string
+      }
+      newfile.close(); //close the file object.
+   } else {
+   		cout << "Error no such file or directory " << file << endl;
+    	exit(0);
+   }
+    return c_;
 }
 
 void write(string file, string towrite) {
-    ofstream outfile(file.c_str());
+    ofstream outfile(file.c_str(), ios::out);
     outfile << towrite;
 }
 
@@ -59,64 +77,45 @@ int search_one(string str, char chr) {
     return -1;
 }
 
-int search(const string& str, const string& pattern)
-{
-    int isinstring = 0;
-    char first;
-    int M = pattern.length();
-    int N = str.length();
-
-    for (int i = 0; i <= N - M; i++)
-    {
+int search(string str, string pattern) {
+    bool isinstring = 0;
+    char first = 0;
+    int M = pattern.size()-1;
+    int N = str.size()-1;
+    if (pattern.size() == 1) {
+        return search_one(str, pattern[0]);
+	}
+    for (int i; i <= (N-M); i++) {
         int jj = 0;
-
-        if (str[i] == '"')
-        {
-            if (isinstring == 1)
-            {
-                if (str[i] == first)
-                {
+        if (str[i] == '"') {
+            if (isinstring == 1) {
+                if (str[i] == first) {
                     isinstring = 0;
-                }
-            }
-            else
-            {
+				}
+            } else {
                 isinstring = 1;
                 first = '"';
-            }
-        }
-        else if (str[i] == '\'')
-        {
-            if (isinstring == 1)
-            {
-                if (str[i] == first)
-                {
+			}
+		} else if (str[i] == '\'') {
+            if (isinstring == 1) {
+                if (str[i] == first) {
                     isinstring = 0;
-                }
-            }
-            else
-            {
+				}
+            } else {
                 isinstring = 1;
                 first = '\'';
-            }
-        }
-
-        for (int j = 0; j < M; j++)
-        {
-            if (str[i + j] != pattern[j])
-            {
+			}
+		}
+        for (int j; j <= M; j++) {
+            if (str[i + j] != pattern[j]) {
                 break;
-            }
-
+			}
             jj = j;
-        }
-
-        if (jj == M - 1 && isinstring == 0)
-        {
+		}
+        if (jj == (M-1) && isinstring == 0) {
             return i;
-        }
-    }
-
+		}
+	}
     return -1;
 }
 
@@ -137,6 +136,7 @@ int lastline(string s, string sub) {
             return i;
         }
     }
+    return 0;
 }
 
 string getline(string s, int line) {
@@ -187,7 +187,7 @@ bool isstring(string str) {
 }
 
 int* getstring(string str) {
-    int pos[2];
+    static int pos[2];
     char tosearch = '"';
 
     if (str.find('"') < str.find("'")) {
@@ -204,7 +204,7 @@ int* getstring(string str) {
 }
 
 bool isvar(string str) {
-    int pos[2] = { 0, 0 };
+    int pos[2];
     if (search(str, "%") != -1) {
         pos[0] = search(str, "%") + 1;
         string str2 = str.substr(search(str, "%") + 1);
@@ -222,7 +222,7 @@ bool isvar(string str) {
 }
 
 int* getvar(string str) {
-    int pos[2];
+    static int pos[2];
     if (search(str, "%") != -1) {
         pos[0] = search(str, "%") + 1;
         string str2 = str.substr(search(str, "%") + 1);
@@ -264,7 +264,7 @@ int iscond(string str)
 
 int* getcond(string str)
 {
-    int pos[2];
+    static int pos[2];
     if (search(str, "$") != -1)
     {
         pos[0] = search(str, "$") + 1;
@@ -467,10 +467,12 @@ bool bislist(string str)
 
 int* islist(string str)
 {
-    int pos[2];
+    static int pos[2];
     if (search(str, "]") != -1)
     {
         pos[0] = search(str, "]");
+		cout << "end" << endl;
+    	exit(0);
         str = str.substr(search(str, "[") + 1);
         if (search(str, "]") != -1)
         {
@@ -489,6 +491,7 @@ int* islist(string str)
 }
 
 string notab(string str) {
+	debug("notab");
     bool isinstring = 0;
     char first;
     string nstr = "";
@@ -619,11 +622,13 @@ list getParametersF(std::string function) {
 }
 
 list getParameters(string function, dict var) {
+	debug("getParameters");
     list parameters;
     bool pos = 1;
     string l = function;
     string after = l.substr(search(l, "(") + 1, l.length() - 1);
     while (pos) {
+    	debug("pos: " + to_string(pos) + " after: " + after);
         if (bislist(after) && (getvar(after)[0] > islist(after)[0] || isvar(after) == 0)) {
             pos = 1;
             parameters.push_back(getlist(after, var));
@@ -646,11 +651,10 @@ list getParameters(string function, dict var) {
         else if (isfloat(after)) {
             parameters.push_back(stof(after));
         }
-        else if (isstring(after)) {
-            parameters.push_back(after.substr(1, after.length() - 2));
-        }
         else if (isvar(after)) {
-            if (getvar(after)[0] < islist(after)[0]){
+        	int v = getvar(after)[0];
+        	int l = islist(after)[0];
+            if (v < l){
                 int index = getlist(after, var)[0].as<int>();
                 int* s = getvar(after);
                 list l_ = var[after.substr(s[0], s[1])].as<list>();
@@ -664,11 +668,12 @@ list getParameters(string function, dict var) {
         else {
             pos = 0;
         }
-        if (search(after, ",") == -1) {
-            after = after.substr(0, after.length() - 1);
+        if (search(after, ",") != -1) {
+        	after = after.substr(search(after, ",") + 1, after.length());
         }
-        after = after.substr(after.find(",") + 1, after.length());
+        after = after.substr(0, after.length() - 1);
     }
+    cout << "end" << endl;
     return parameters;
 }
 
@@ -688,9 +693,11 @@ int index(vector<string> vec, string str) {
             return i;
         }
     }
+    return -1;
 }
 
-ls::ls(string script_) {
+ls::ls(vector<string> script_) {
+	debug("ls::ls");
     default_function[""] = -1;
     default_function["print(%string%)"] = 0;
     default_function["os.file.write(%file%, %string%)"] = 1;
@@ -700,17 +707,13 @@ ls::ls(string script_) {
     default_function["free(%variable%)"] = 5;
     default_function["goto(%name%)"] = 6;
     default_function["label(%name%)"] = 7;
-    for (string& i : getAllLines(script_)) {
-        if (search(i, "#") != -1) {
-            script.push_back(i.substr(0, search(i, "#")));
-        }
-        else {
-            script.push_back(i);
-        }
+    for (string& i : script_) {
+        script.push_back(i.substr(0, search(i, "#")));
     }
 }
 
 void ls::parse() {
+	debug("ls::parse");
     for (int l = 0; l < script.size() - 1; l++) {
         string subscript = script[l];
         if (subscript.find("def") != std::string::npos && subscript.find(":") != std::string::npos) {
@@ -744,6 +747,10 @@ Any ls::typescan(string after) {
     else if (isfloat(after)){
      return stof(after);
     }
+    cout << "Unknown error at unknown line... Type not found" << endl;
+    cout << "C++ Fatal error at line 752, exit()" << endl;
+    exit(0);
+    return 0;
 }
 
 void ls::scanVarI(string l) {
@@ -938,9 +945,14 @@ Any ls::condI(string l, int line) {
 			return 0;
 		}
     }
+    cout << "Unknown error at line " << line << " verify this code!" << endl;
+    cout << "C++ Fatal error at line 946, exit()." << endl;
+    exit(0);
+    return 0;
 }
 
 Any ls::exec_(string i, int line, list parameters, string function, bool one) {
+	debug("ls::exec_; line:"+to_string(line+1));
     Any toreturn;
     if (!one) {
         int j = 0;
@@ -976,7 +988,7 @@ Any ls::exec_(string i, int line, list parameters, string function, bool one) {
                 toreturn = exec(i, line2);
             }
             try {
-                if (toreturn.as<list>()[0].as<string>() == "__Python__.__ls__.__sys__.__ goto__") {
+                if (toreturn.as<list>()[0].as<string>() == "__C++__.__ls__.__sys__.__ goto__") {
                     int j = toreturn.as<list>()[1].as<int>() - line;
                     toreturn = nullptr;
                 }
@@ -1003,27 +1015,29 @@ Any ls::exec_(string i, int line, list parameters, string function, bool one) {
 }
 
 Any ls::exec(string function, int line) {
+	debug("ls::exec; line:"+to_string(line+1));
     Any func = "";
     string function_ = notab(function);
     Any toreturn;
     Any parameters = getParameters(function, var);
-    for (std::map<string, int>::iterator it = functions.begin(); it != functions.end(); ++it) {
-        string i = it->first;
+    cout << "end" << endl;
+    for (const auto& it: functions) {
+        string i = it.first;
         string nf = i.substr(0, search(i, "(") + 1) + i.substr(-1);
         string tcf = function.substr(0, search(function, "(") + 1) + function.substr(-1);
-            if (nf == tcf) {
-                func = i;
-                    toreturn = exec_(i, line, parameters, function);
-                    break;
-            }
+        cout << nf << endl << tcf << endl << (nf == tcf) << endl;
+        if (nf == tcf) {
+            func = it.second;
+            toreturn = exec_(i, line, parameters, function);
+            break;
+        }
     }
-    for (std::map<string, int>::iterator it = default_function.begin(); it != default_function.end(); ++it) {
-        string i = it->first;
+    for (const auto& it: default_function) {
+        string i = it.first;
         string nf = i.substr(0, search(i, "(") + 1) + i.substr(-1);
         string tcf = function.substr(0, search(function, "(") + 1) + function.substr(-1);
         if (nf == tcf) {
-            func = i;
-            func = default_function[func];
+            func = it.second;
             if (func.as<int>() == 0) {
                 parameters.as<list>()[0].print();
                 cout << endl;
@@ -1048,7 +1062,10 @@ Any ls::exec(string function, int line) {
                 bool f = 1;
             }
             else if (func.as<int>() == 6) {
-            	toreturn = 1;
+            	list l_;
+            	l_.push_back("__C++__.__ls__.__sys__.__ goto__");
+            	l_.push_back(parameters.as<list>()[0].as<int>());
+            	toreturn = l_;
             }
             else if (func.as<int>() == 7) {
                 label[parameters.as<list>()[0].as<string>()] = line + 1;
@@ -1065,9 +1082,15 @@ Any ls::exec(string function, int line) {
 
 int main(int argc, char* argv[])
 {
+	if (search(argv[2], "-debug") != -1){
+		cout << "C++: debug mode active" << endl;
+		isdebug = true;
+	}
+	cout << "C++: debug mode active" << endl;
+	isdebug = true;
     ls reader = ls(read(argv[1]));
     reader.parse();
-    reader.var["__Python__.__LS__.__swys__.__argv__"] = argv;
-    reader.exec("start(%__Python__.__LS__.__sys__.__argv__%)", 0);
+    reader.var["__C++__.__LS__.__swys__.__argv__"] = argv;
+    reader.exec("start(%__C++__.__LS__.__sys__.__argv__%)", 0);
 	return 0;
 }
