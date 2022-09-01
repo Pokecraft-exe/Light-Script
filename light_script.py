@@ -451,7 +451,13 @@ class ls():
         pos = isvar(l)
         after = l[search(l, "=")+1:]
         posi = pos[1]
-        self.var[l[posi[0]:posi[1]]] = self.typescan(after)
+        if isvar(after)[1][0] < islist(after)[1][0]:
+                index = getlist(after)
+                s = isvar(after)
+                self.var[l[posi[0]:posi[1]]][index] = self.typescan(after)
+        else:
+            s = isvar(after)
+            self.var[l[posi[0]:posi[1]]][index] = self.typescan(after)
 
                 
     def scanCondI(self, l):
