@@ -436,7 +436,7 @@ class ls():
             return eval(replacevar(after, self.var))
         elif isvar(after)[0]:
             if isvar(after)[1][0] < islist(after)[1][0]:
-                index = getlist(after)
+                index = getlist(after, self.var)[0]
                 s = isvar(after)
                 return self.var[after[s[1][0]:s[1][1]]][index]
             s = isvar(after)
@@ -451,13 +451,11 @@ class ls():
         pos = isvar(l)
         after = l[search(l, "=")+1:]
         posi = pos[1]
-        if isvar(after)[1][0] < islist(after)[1][0]:
-                index = getlist(after)
-                s = isvar(after)
+        if isvar(l)[1][0] < islist(l)[1][0]:
+                index = getlist(l, self.var)[0][0]
                 self.var[l[posi[0]:posi[1]]][index] = self.typescan(after)
         else:
-            s = isvar(after)
-            self.var[l[posi[0]:posi[1]]][index] = self.typescan(after)
+            self.var[l[posi[0]:posi[1]]] = self.typescan(after)
 
                 
     def scanCondI(self, l):
@@ -614,10 +612,13 @@ class ls():
 
 
 def main():
-    reader = ls(read(argv[1]))
-    reader.parse(read(argv[1]))
-    reader.var["__Python__.__LS__.__sys__.__argv__"] = argv
-    reader.exec("start(%__Python__.__LS__.__sys__.__argv__%)", 0)
+    if (len(argv) != 0):
+        reader = ls(read(argv[1]))
+        reader.parse(read(argv[1]))
+        reader.var["__Python__.__LS__.__sys__.__argv__"] = argv
+        reader.exec("start(%__Python__.__LS__.__sys__.__argv__%)", 0)
+    else:
+        print("Specify a file to read")
     
 
 main()
