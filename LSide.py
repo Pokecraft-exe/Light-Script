@@ -1,8 +1,8 @@
 # import all functions from the tkinter
 from tkinter import *
 from tkinter.filedialog import *
-from sys import argv
 
+global file
 file = ""
 root = Tk(className = " Light Script IDE")
 root['bg'] = 'black'
@@ -15,6 +15,7 @@ tags = []
 menubar = Menu(root)
 
 def openFile():
+    global file
     file = askopenfilename(title="Open",filetypes=[('Light Script files','.ls'),('all files','.*')])
     with open(file, 'r') as f:
         text.insert("1.0", f.read())
@@ -23,8 +24,13 @@ def openFile():
 
 
 def saveFile():
-    f = asksaveasfile(initialfile = file, defaultextension=".ls",filetypes=[("All Files","*.*"),("Light Script","*.ls")])
-    f.write(text.get("1.0", END))
+    global file
+    if file == "":
+        f = asksaveasfile(initialfile = file, defaultextension=".ls",filetypes=[("All Files","*.*"),("Light Script","*.ls")])
+        f.write(text.get("1.0", END))
+    else:
+        with open(file, 'w') as f:
+            f.write(text.get("1.0", END))
     return 0
 
 
