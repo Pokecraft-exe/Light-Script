@@ -401,9 +401,11 @@ class ls():
         self.default_function["print(%string%)"] = 0
         self.default_function["os.file.write(%file%, %string%)"] = 1
         self.default_function["os.file.read(%file%)"] = 2
+        self.default_function["write(%file%, %string%)"] = 1
+        self.default_function["read(%file%)"] = 2
         self.default_function["input(%string%)"] = 3
         self.default_function["return(%to_return%)"] = 4
-        self.default_function["free(%variable%)"] = 5
+        self.default_function["len(%list%)"] = 5
         self.default_function["goto(%name%)"] = 6
         self.default_function["label(%name%)"] = 7
         self.condition = {}
@@ -451,7 +453,7 @@ class ls():
         pos = isvar(l)
         after = l[search(l, "=")+1:]
         posi = pos[1]
-        if isvar(l)[1][0] < islist(l)[1][0]:
+        if search(l, "=") > islist(l)[1][0] and islist(l)[0] != 0:
                 index = getlist(l, self.var)[0][0]
                 self.var[l[posi[0]:posi[1]]][index] = self.typescan(after)
         else:
@@ -599,7 +601,7 @@ class ls():
                 elif func == 4:
                     toreturn = parameters[0]
                 elif func == 5:
-                    f = 1
+                    toreturn = len(parameters[0])
                 elif func == 6:
                     toreturn = ["__Python__.__ls__.__sys__.__goto__", self.label[parameters[0]]]
                 elif func == 7:
