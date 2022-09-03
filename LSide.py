@@ -1,16 +1,19 @@
-# import all functions from the tkinter
 from tkinter import *
 from tkinter.filedialog import *
+from sys import argv
 
 global file
-file = ""
-root = Tk(className = " Light Script IDE")
+global text_
+text_ = ""
+file = "NewFile"
+root = Tk(className = " Light Script IDE - NewFile")
 root['bg'] = 'black'
 frame = Frame(root)
-frame.pack(pady=5)
+frame.pack(pady=5, expand=True, fill='both')
 frame.configure(background = 'black')
-text = Text(frame, selectbackground="gray", background="black", foreground='white', undo=True)
-text.pack(expand=1, fill=BOTH)
+text = Text(frame, insertbackground="white", selectbackground="gray", background="black", foreground='white', undo=True)
+text.pack(expand=True, fill='both')
+text_ = text.get("1.0", END)
 tags = []
 menubar = Menu(root)
 
@@ -18,6 +21,7 @@ def openFile():
     global file
     file = askopenfilename(title="Open",filetypes=[('Light Script files','.ls'),('all files','.*')])
     with open(file, 'r') as f:
+        text_ = text.get("1.0", END)
         text.insert("1.0", f.read())
     root.title(' Light Script IDE - ' + file)
     return 0
@@ -25,7 +29,8 @@ def openFile():
 
 def saveFile():
     global file
-    if file == "":
+    root.title(' Light Script IDE - ' + file)
+    if file == "NewFile":
         f = asksaveasfile(initialfile = file, defaultextension=".ls",filetypes=[("All Files","*.*"),("Light Script","*.ls")])
         f.write(text.get("1.0", END))
     else:
@@ -42,15 +47,6 @@ menu1.add_command(label="Exit", command=exit)
 menubar.add_cascade(label="File", menu=menu1)
 
 root.config(menu=menubar)
-            
-def read(file):
-    with open(file, 'r') as f:
-        c = f.read()
-    return c
-
-def write(file, towrite):
-    with open(file, 'w') as f:
-        f.write(towrite)
 
 
 def getAllLines(string):
@@ -66,6 +62,7 @@ def getAllLines(string):
 
 
 def search_one(string, char):
+    string = string + " "
     isinstring = 0
     first = ""
     N = len(string)
@@ -90,6 +87,7 @@ def search_one(string, char):
 
 
 def search(string, pattern):
+    string = string + " "
     isinstring = 0
     first = ""
     M = len(pattern)
@@ -122,6 +120,7 @@ def search(string, pattern):
 
 
 def searchend(string, pattern):
+    string = string + " "
     isinstring = 0
     first = ""
     M = len(pattern)
@@ -272,7 +271,7 @@ def scanKeyWord(after):
         return [search(after, ":"), searchend(after, ":")]
     return [-1, -1]
 
-
+    
 def exec_():
     j=0
     line = 1
@@ -353,8 +352,29 @@ def exec_():
             text.tag_add(tags[-1], str(line2)+'.'+str(comment), str(line2)+'.'+str(len(i)))
             text.tag_config(tags[-1], foreground="red")
         j += 1
-    root.after(1000, exec_)
+    return 0
 
+
+def check():
+    global text_
+    if (text.get("1.0", END) != text_):
+        root.title(' Light Script IDE - *' + file)
+        text_ = text.get("1.0", END)
+        exec_()
+    root.after(500, check)
   
-root.after(1000, exec_)
+root.after(500, check)
+if len(argv) == 2:
+    try:
+        file = argv[2]
+        with open(file, 'r') as f:
+            text_ = text.get("1.0", END)
+            text.insert("1.0", f.read())
+        root.title(' Light Script IDE - ' + file)
+    except:
+        print("Argument must be a path to a file")
+else:
+    if len(argv) > 2:
+        print("LSide only take 1 argument")
+        
 root.mainloop()
