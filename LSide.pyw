@@ -5,6 +5,8 @@ from sys import argv
 
 global file
 global text_
+global clicked
+clicked = 0
 text_ = ""
 file = "NewFile"
 root = Tk(className = " Light Script IDE - NewFile")
@@ -39,6 +41,7 @@ def write(file, towrite):
 
 def search_one(string, char):
     isinstring = 0
+    strint = string+' '
     first = ""
     N = len(string)
     for i in range(N):
@@ -64,6 +67,7 @@ def search_one(string, char):
 def search(string, pattern):
     isinstring = 0
     first = ""
+    strint = string+' '
     M = len(pattern)
     N = len(string)
     if len(pattern) == 1:
@@ -96,6 +100,7 @@ def search(string, pattern):
 def searchend(string, pattern):
     isinstring = 0
     first = ""
+    strint = string+' '
     M = len(pattern)
     N = len(string)
     if len(pattern) == 1:
@@ -701,13 +706,40 @@ def run():
     reader.parse(read(file))
     reader.var["noargs"] = [file]
     reader.exec("start(%noargs%)", 0)
-    console.mainloop()
+
+
+class askstring():
+    def __init__(self, title, message):
+        self.toreturn = ''
+        self.w = Toplevel(root)
+        self.w.title(title)
+        self.clicked = False
+        Label(self.w, text=message).pack(expand=True, fill='y', side = TOP)
+        self.e = Entry(self.w)
+        self.e.pack(expand=True, fill='y')
+        Button(self.w, text="OK", command=self.clickedtrue).pack(expand=True, fill='y', side = BOTTOM)
+
+
+    def Return(self):
+        return self.toreturn
+
+    
+    def clickedtrue(self):
+        self.clicked = True
+        self.toreturn = self.e.get()
+        self.w.destroy()
 
 
 def runcustom():
-    args = askquestion(title='Arguments', message='Arguments:')
-    system('LSpy "'+file+'"'+args)
-    return
+    args = askstring('Run Custom', 'Arguments:')
+    root.wait_window(args.w)
+    args = args.Return()
+    printc('')
+    printc('----- {} -----'.format(file))
+    reader = ls(read(file))
+    reader.parse(read(file))
+    reader.var["__Python__.__LS__.__sys__.__argv__"] = [file, args]
+    reader.exec("start(%__Python__.__LS__.__sys__.__argv__%)", 0)
 
 
 menu1 = Menu(menubar, tearoff=0)
@@ -880,5 +912,7 @@ if len(argv) == 2:
 else:
     if len(argv) > 2:
         printc("LSide only take 1 argument")
-        
+
+
+console.mainloop() 
 root.mainloop()
