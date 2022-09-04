@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter.filedialog import *
 from tkinter.messagebox import *
 from sys import argv
+from math import *
 
 global file
 global text_
@@ -379,46 +380,6 @@ def getParametersF(function):
     return parameters
 
 
-def getParameters(function, var):
-    parameters = []
-    pos=1
-    l = function
-    after = l[search(l, "(")+1:-1]
-    while pos:
-        if islist(after)[0] and (isvar(after)[1][0] > islist(after)[1][0] or isvar(after)[0] == 0):
-            pos = 1
-            parameters.append(getlist(after, var))
-        elif isstring(after)[0]:
-            pos = 1
-            s = isstring(after)
-            parameters.append(after[s[1][0]:s[1][1]])
-        elif isfunc(after):
-            pos = 1
-        elif ismath(after, var):
-            pos = 1
-            parameters.append(eval(replacevar(after, var)))
-        elif isvar(after)[0]:
-            if isvar(after)[1][0] < islist(after)[1][0]:
-                index = getlist(after, var)
-                s = isvar(after)
-                parameters.append(var[after[s[1][0]:s[1][1]]][index])
-            else:
-                s = isvar(after)
-                parameters.append(var[after[s[1][0]:s[1][1]]])
-        elif isint(after):
-            pos = 1
-            parameters.append(int(after))
-        elif isfloat(after):
-            pos = 1
-            parameters.append(float(after))
-        else:
-            pos = 0
-        if search(after, ",") == -1:
-            after = after[:-1]
-        after = after[search(after, ",")+1:]
-    return parameters
-
-
 def scanCondType(after):
     if search(after, "==") != -1:
         return "=="
@@ -472,6 +433,9 @@ class ls():
         self.default_function["len(%list%)"] = 5
         self.default_function["goto(%name%)"] = 6
         self.default_function["label(%name%)"] = 7
+        self.default_function["sin(%float%)"] = 8
+        self.default_function["cos(%float%)"] = 9
+        self.default_function["tan(%float%)"] = 10
         self.condition = {}
         self.var = {}
         for i in getAllLines(script):
@@ -492,7 +456,7 @@ class ls():
 
     def typescan(self, after):
         if islist(after)[0] and (isvar(after)[1][0] > islist(after)[1][0] or isvar(after)[0] == 0):
-                return getlist(after, self.var)
+            return getlist(after, self.var)
         elif isfunc(after):
             return self.exec(after, 0)
         elif isstring(after)[0]:
@@ -523,7 +487,48 @@ class ls():
         else:
             self.var[l[posi[0]:posi[1]]] = self.typescan(after)
 
-                
+
+    def getParameters(self, function, line):
+        parameters = []
+        pos=1
+        l = function
+        after = l[search(l, "(")+1:-1]
+        while pos:
+            if islist(after)[0] and (isvar(after)[1][0] > islist(after)[1][0] or isvar(after)[0] == 0):
+                pos = 1
+                parameters.append(getlist(after, self.var))
+            elif isstring(after)[0]:
+                pos = 1
+                s = isstring(after)
+                parameters.append(after[s[1][0]:s[1][1]])
+            elif isfunc(after):
+                pos = 1
+                parameters.append(self.exec(function[search(function, '(')+1: -1], line))
+            elif ismath(after, self.var):
+                pos = 1
+                parameters.append(eval(replacevar(after, self.var)))
+            elif isvar(after)[0]:
+                if isvar(after)[1][0] < islist(after)[1][0]:
+                    index = getlist(after, self.var)
+                    s = isvar(after)
+                    parameters.append(self.var[after[s[1][0]:s[1][1]]][index])
+                else:
+                    s = isvar(after)
+                    parameters.append(self.var[after[s[1][0]:s[1][1]]])
+            elif isint(after):
+                pos = 1
+                parameters.append(int(after))
+            elif isfloat(after):
+                pos = 1
+                parameters.append(float(after))
+            else:
+                pos = 0
+            if search(after, ",") == -1:
+                after = after[:-1]
+            after = after[search(after, ",")+1:]
+        return parameters
+
+
     def scanCondI(self, l):
         pos = iscond(l)
         after = l[search(l, "=")+1:]
@@ -640,7 +645,7 @@ class ls():
         func = ""
         function = notab(function)
         toreturn = None
-        parameters = getParameters(function, self.var)
+        parameters = self.getParameters(function, line)
         for i in self.functions:
             nf = i[:search(i, "(")+1]+i[-1:]
             tcf = function[:search(function, "(")+1]+function[-1:]
@@ -655,6 +660,7 @@ class ls():
                 func = i
                 func = self.default_function[func]
                 if func == 0:
+                    print(parameters, line)
                     printc(parameters[0])
                 elif func == 1:
                     write(parameters[0], parameters[1])
@@ -670,12 +676,21 @@ class ls():
                     toreturn = ["__Python__.__ls__.__sys__.__goto__", self.label[parameters[0]]]
                 elif func == 7:
                     self.label[parameters[0]] = line+1
+                elif func == 8:
+                    toreturn = sin(parameters[0])
+                elif func == 9:
+                    toreturn = cos(parameters[0])
+                elif func == 10:
+                    toreturn = tan(parameters[0])
                 break
         if func == "":
             printc("Error, function not found `{}' at line {}".format(function, line))
             return None
         return toreturn
 
+
+global reader
+reader = ls("")
 
 def openFile():
     global file
@@ -700,6 +715,7 @@ def saveFile():
 
 
 def run():
+    global reader
     printc('')
     printc('----- {} -----'.format(file))
     reader = ls(read(file))
@@ -730,7 +746,28 @@ class askstring():
         self.w.destroy()
 
 
+class debugWindow():
+    def __init__(self, title, tofollow):
+        self.w = Toplevel(root)
+        self.w.title(title)
+        self.l1 = Listbox(self.w)
+        self.l1.pack(expand=True, fill='both', side = LEFT)
+        self.l2 = Listbox(self.w)
+        self.l2.pack(expand=True, fill='both', side = RIGHT)
+        self.update(tofollow)
+
+
+    def update(self, tofollow):
+        i = 1
+        for x in tofollow:
+            self.l1.insert(i, x)
+            self.l2.insert(i, tofollow[x])
+            i + i + 1
+        
+
+
 def runcustom():
+    global reader
     args = askstring('Run Custom', 'Arguments:')
     root.wait_window(args.w)
     args = args.Return()
@@ -742,6 +779,19 @@ def runcustom():
     reader.exec("start(%__Python__.__LS__.__sys__.__argv__%)", 0)
 
 
+def seevar():
+    w = debugWindow('Variables', reader.var)
+    return
+
+
+def seecond():
+    w = debugWindow('Conditions', reader.condition)
+    return
+
+
+def seefunc():
+    w = debugWindow('Functions', reader.functions)
+    return
 menu1 = Menu(menubar, tearoff=0)
 menu1.add_command(label="Open", command=openFile)
 menu1.add_command(label="Save", command=saveFile)
@@ -752,6 +802,11 @@ menu2 = Menu(menubar, tearoff=0)
 menu2.add_command(label="Run", command=run)
 menu2.add_command(label="Run Custom...", command=runcustom)
 menubar.add_cascade(label="Run", menu=menu2)
+menu3 = Menu(menubar, tearoff=0)
+menu3.add_command(label="Variables", command=seevar)
+menu3.add_command(label="Conditions", command=seecond)
+menu3.add_command(label="Functions", command=seefunc)
+menubar.add_cascade(label="Debug", menu=menu3)
 
 root.config(menu=menubar)
 
