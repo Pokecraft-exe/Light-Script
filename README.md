@@ -3,7 +3,7 @@ The light script language is a programmation language used in site making
 
 use `python light-script.py [file]` to run your .ls code
 
-<a href">https://github.com/Pokecraft-exe/Light-Script/wiki">https://github.com/Pokecraft-exe/Light-Script/wiki</a>
+https://github.com/Pokecraft-exe/Light-Script/wiki
 
 # LS IDE.pyw
 
