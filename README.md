@@ -7,4 +7,4 @@ use `python light-script.py [file]` to run your .ls code
 
 The language is included
 
-![image](https://user-images.githubusercontent.com/67156699/188289440-abe6d115-82ae-48c4-a9b6-f180bc8b42fc.png)
+![image](https://user-images.githubusercontent.com/67156699/188330887-0ff13c9f-81d7-477b-b332-932430a63b6e.png)
