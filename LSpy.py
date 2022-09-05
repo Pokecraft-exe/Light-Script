@@ -1,4 +1,9 @@
 from sys import argv
+from math import *
+
+def printc(string):
+    print(string)
+    
 
 def read(file):
     with open(file, 'r') as f:
@@ -12,6 +17,7 @@ def write(file, towrite):
 
 def search_one(string, char):
     isinstring = 0
+    strint = string+' '
     first = ""
     N = len(string)
     for i in range(N):
@@ -37,6 +43,7 @@ def search_one(string, char):
 def search(string, pattern):
     isinstring = 0
     first = ""
+    strint = string+' '
     M = len(pattern)
     N = len(string)
     if len(pattern) == 1:
@@ -63,6 +70,39 @@ def search(string, pattern):
             jj = j
         if jj == (M-1) and isinstring == 0:
             return i
+    return -1
+
+
+def searchend(string, pattern):
+    isinstring = 0
+    first = ""
+    strint = string+' '
+    M = len(pattern)
+    N = len(string)
+    if len(pattern) == 1:
+        return search_one(string, pattern)
+    for i in range(N-M):
+        jj = 0
+        if string[i] == '"':
+            if isinstring == 1:
+                if string[i] == first:
+                    isinstring = 0
+            else:
+                isinstring = 1
+                first = '"'
+        elif string[i] == "'":
+            if isinstring == 1:
+                if string[i] == first:
+                    isinstring = 0
+            else:
+                isinstring = 1
+                first = "'"
+        for j in range(M):
+            if string[i + j] != pattern[j]:
+                break;
+            jj = j
+        if jj == (M-1) and isinstring == 0:
+            return i+M
     return -1
 
 
@@ -315,46 +355,6 @@ def getParametersF(function):
     return parameters
 
 
-def getParameters(function, var):
-    parameters = []
-    pos=1
-    l = function
-    after = l[search(l, "(")+1:-1]
-    while pos:
-        if islist(after)[0] and (isvar(after)[1][0] > islist(after)[1][0] or isvar(after)[0] == 0):
-            pos = 1
-            parameters.append(getlist(after, var))
-        elif isstring(after)[0]:
-            pos = 1
-            s = isstring(after)
-            parameters.append(after[s[1][0]:s[1][1]])
-        elif isfunc(after):
-            pos = 1
-        elif ismath(after, var):
-            pos = 1
-            parameters.append(eval(replacevar(after, var)))
-        elif isvar(after)[0]:
-            if isvar(after)[1][0] < islist(after)[1][0]:
-                index = getlist(after, var)
-                s = isvar(after)
-                parameters.append(var[after[s[1][0]:s[1][1]]][index])
-            else:
-                s = isvar(after)
-                parameters.append(var[after[s[1][0]:s[1][1]]])
-        elif isint(after):
-            pos = 1
-            parameters.append(int(after))
-        elif isfloat(after):
-            pos = 1
-            parameters.append(float(after))
-        else:
-            pos = 0
-        if search(after, ",") == -1:
-            after = after[:-1]
-        after = after[search(after, ",")+1:]
-    return parameters
-
-
 def scanCondType(after):
     if search(after, "==") != -1:
         return "=="
@@ -408,6 +408,10 @@ class ls():
         self.default_function["len(%list%)"] = 5
         self.default_function["goto(%name%)"] = 6
         self.default_function["label(%name%)"] = 7
+        self.default_function["sin(%float%)"] = 8
+        self.default_function["cos(%float%)"] = 9
+        self.default_function["tan(%float%)"] = 10
+        self.default_function["pi()"] = 11
         self.condition = {}
         self.var = {}
         for i in getAllLines(script):
@@ -428,7 +432,7 @@ class ls():
 
     def typescan(self, after):
         if islist(after)[0] and (isvar(after)[1][0] > islist(after)[1][0] or isvar(after)[0] == 0):
-                return getlist(after, self.var)
+            return getlist(after, self.var)
         elif isfunc(after):
             return self.exec(after, 0)
         elif isstring(after)[0]:
@@ -459,7 +463,48 @@ class ls():
         else:
             self.var[l[posi[0]:posi[1]]] = self.typescan(after)
 
-                
+
+    def getParameters(self, function, line):
+        parameters = []
+        pos=1
+        l = function
+        after = l[search(l, "(")+1:-1]
+        while pos:
+            if islist(after)[0] and (isvar(after)[1][0] > islist(after)[1][0] or isvar(after)[0] == 0):
+                pos = 1
+                parameters.append(getlist(after, self.var))
+            elif isstring(after)[0]:
+                pos = 1
+                s = isstring(after)
+                parameters.append(after[s[1][0]:s[1][1]])
+            elif isfunc(after):
+                pos = 1
+                parameters.append(self.exec(function[search(function, '(')+1: -1], line))
+            elif ismath(after, self.var):
+                pos = 1
+                parameters.append(eval(replacevar(after, self.var)))
+            elif isvar(after)[0]:
+                if isvar(after)[1][0] < islist(after)[1][0]:
+                    index = getlist(after, self.var)
+                    s = isvar(after)
+                    parameters.append(self.var[after[s[1][0]:s[1][1]]][index])
+                else:
+                    s = isvar(after)
+                    parameters.append(self.var[after[s[1][0]:s[1][1]]])
+            elif isint(after):
+                pos = 1
+                parameters.append(int(after))
+            elif isfloat(after):
+                pos = 1
+                parameters.append(float(after))
+            else:
+                pos = 0
+            if search(after, ",") == -1:
+                after = after[:-1]
+            after = after[search(after, ",")+1:]
+        return parameters
+
+
     def scanCondI(self, l):
         pos = iscond(l)
         after = l[search(l, "=")+1:]
@@ -534,9 +579,9 @@ class ls():
             parametersF = getParametersF(script[0])
             script = script[1:script.index(end)]
             if len(parameters) > len(parametersF):
-                print("Error: too many parameters for function `{}', at line {}".format(function, line))
+                printc("Error: too many parameters for function `{}', at line {}".format(function, line))
             if len(parameters) < len(parametersF):
-                print("Error: not enough parameters for function `{}', at line {}".format(function, line))
+                printc("Error: not enough parameters for function `{}', at line {}".format(function, line))
                 return None
             for i in range(len(parametersF)):
                 self.var[parametersF[i]] = parameters[i]
@@ -576,7 +621,7 @@ class ls():
         func = ""
         function = notab(function)
         toreturn = None
-        parameters = getParameters(function, self.var)
+        parameters = self.getParameters(function, line)
         for i in self.functions:
             nf = i[:search(i, "(")+1]+i[-1:]
             tcf = function[:search(function, "(")+1]+function[-1:]
@@ -591,7 +636,7 @@ class ls():
                 func = i
                 func = self.default_function[func]
                 if func == 0:
-                    print(parameters[0])
+                    printc(parameters[0])
                 elif func == 1:
                     write(parameters[0], parameters[1])
                 elif func == 2:
@@ -606,12 +651,20 @@ class ls():
                     toreturn = ["__Python__.__ls__.__sys__.__goto__", self.label[parameters[0]]]
                 elif func == 7:
                     self.label[parameters[0]] = line+1
+                elif func == 8:
+                    toreturn = sin(parameters[0])
+                elif func == 9:
+                    toreturn = cos(parameters[0])
+                elif func == 10:
+                    toreturn = tan(parameters[0])
+                elif func == 11:
+                    toreturn = pi
                 break
         if func == "":
-            print("Error, function not found `{}' at line {}".format(function, line))
+            printc("Error, function not found `{}' at line {}".format(function, line))
             return None
         return toreturn
-
+    
 
 def main():
     if (len(argv) != 0):
