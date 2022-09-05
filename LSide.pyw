@@ -436,6 +436,7 @@ class ls():
         self.default_function["sin(%float%)"] = 8
         self.default_function["cos(%float%)"] = 9
         self.default_function["tan(%float%)"] = 10
+        self.default_function["pi()"] = 11
         self.condition = {}
         self.var = {}
         for i in getAllLines(script):
@@ -660,7 +661,6 @@ class ls():
                 func = i
                 func = self.default_function[func]
                 if func == 0:
-                    print(parameters, line)
                     printc(parameters[0])
                 elif func == 1:
                     write(parameters[0], parameters[1])
@@ -682,6 +682,8 @@ class ls():
                     toreturn = cos(parameters[0])
                 elif func == 10:
                     toreturn = tan(parameters[0])
+                elif func == 11:
+                    toreturn = pi
                 break
         if func == "":
             printc("Error, function not found `{}' at line {}".format(function, line))
