@@ -42,7 +42,7 @@ def write(file, towrite):
 
 def search_one(string, char):
     isinstring = 0
-    strint = string+' '
+    string = string+' '
     first = ""
     N = len(string)
     for i in range(N):
@@ -68,7 +68,7 @@ def search_one(string, char):
 def search(string, pattern):
     isinstring = 0
     first = ""
-    strint = string+' '
+    string = string+' '
     M = len(pattern)
     N = len(string)
     if len(pattern) == 1:
@@ -101,7 +101,7 @@ def search(string, pattern):
 def searchend(string, pattern):
     isinstring = 0
     first = ""
-    strint = string+' '
+    string = string+' '
     M = len(pattern)
     N = len(string)
     if len(pattern) == 1:
@@ -310,6 +310,13 @@ def notab(string):
             nstr = nstr + string[i]
             
     return nstr
+
+
+def index(script, end):
+    for i in range(len(script)-1):
+        if search(script[i], end) != -1:
+            return i
+    return -1
 
 
 def getlist(string, var):
@@ -602,7 +609,7 @@ class ls():
             line = func
             script = self.script[func:]
             parametersF = getParametersF(script[0])
-            script = script[1:script.index(end)]
+            script = script[1:index(script, end)]
             if len(parameters) > len(parametersF):
                 printc("Error: too many parameters for function `{}', at line {}".format(function, line))
             if len(parameters) < len(parametersF):
@@ -639,10 +646,62 @@ class ls():
             else:
                 toreturn = self.exec(i, line2)
         return toreturn
-            
-            
 
-    def exec(self, function, line):
+
+    def exec_one_by_one(self, i, line, parameters, function, end = "end def", one = 0):
+        toreturn = None
+        if one == 0:
+            j=0
+            func = self.functions[i]
+            line = func
+            script = self.script[func:]
+            parametersF = getParametersF(script[0])
+            print(index(script, end))
+            script = script[1:index(script, end)]
+            if len(parameters) > len(parametersF):
+                printc("Error: too many parameters for function `{}', at line {}".format(function, line))
+            if len(parameters) < len(parametersF):
+                printc("Error: not enough parameters for function `{}', at line {}".format(function, line))
+                return None
+            for i in range(len(parametersF)):
+                self.var[parametersF[i]] = parameters[i]
+            while j != len(script):
+                line2 = line + j
+                showinfo('Yes', 'Go to next line: {}'.format(line2))
+                i = script[j]
+                if iscond(i)[0] == 0 and isvar(i) != -1 and scanOperator(i) != -1:
+                    self.scanVarI(i)
+                elif iscond(i)[0] == 1 and scanCondType(i) != -1:
+                    self.scanCondI(i)
+                elif iscond(i)[0] == 1:
+                    toreturn = self.condI(i, line2)
+                else:
+                    toreturn = self.exec(i, line2)
+                if type(toreturn) == type([1, 1]):
+                    if toreturn[0] == "__Python__.__ls__.__sys__.__goto__":
+                        j = toreturn[1]-line
+                        toreturn = None
+                else:
+                    j += 1
+            return toreturn
+        else:
+            line2 = line
+            if iscond(i)[0] == 0 and isvar(i) != -1 and scanOperator(i) != -1:
+                self.scanVarI(i)
+            elif iscond(i)[0] == 1 and scanCondType(i) != -1:
+                self.scanCondI(i)
+            elif iscond(i)[0] == 1:
+                toreturn = self.condI(i, line2)
+            else:
+                toreturn = self.exec(i, line2, 1)
+        return toreturn
+            
+            
+    def nextline(self):
+        self.line = 1
+
+        
+    def exec(self, function, line, obo = 0):
         func = ""
         function = notab(function)
         toreturn = None
@@ -652,7 +711,10 @@ class ls():
             tcf = function[:search(function, "(")+1]+function[-1:]
             if nf == tcf:
                 func = i
-                toreturn = self.exec_(i, line, parameters, function)
+                if obo == 0:
+                    toreturn = self.exec_(i, line, parameters, function)
+                else:
+                    toreturn = self.exec_one_by_one(i, line, parameters, function)
                 break
         for i in self.default_function:
             nf = i[:search(i, "(")+1]+i[-1:]
@@ -726,6 +788,21 @@ def run():
     reader.exec("start(%noargs%)", 0)
 
 
+def run_lbl():
+    global reader
+    printc('')
+    printc('----Debug line by line | Debug > Next line ----')
+    printc('----- {} -----'.format(file))
+    reader = ls(read(file))
+    reader.parse(read(file))
+    reader.var["noargs"] = [file]
+    reader.exec("start(%noargs%)", 0, 1)
+
+
+def nextline():
+    reader.nextline()
+
+    
 class askstring():
     def __init__(self, title, message):
         self.toreturn = ''
@@ -803,11 +880,13 @@ menubar.add_cascade(label="File", menu=menu1)
 menu2 = Menu(menubar, tearoff=0)
 menu2.add_command(label="Run", command=run)
 menu2.add_command(label="Run Custom...", command=runcustom)
+menu2.add_command(label="Run Line by Line", command=run_lbl)
 menubar.add_cascade(label="Run", menu=menu2)
 menu3 = Menu(menubar, tearoff=0)
 menu3.add_command(label="Variables", command=seevar)
 menu3.add_command(label="Conditions", command=seecond)
 menu3.add_command(label="Functions", command=seefunc)
+menu3.add_command(label="Next Line", command=nextline)
 menubar.add_cascade(label="Debug", menu=menu3)
 
 root.config(menu=menubar)
