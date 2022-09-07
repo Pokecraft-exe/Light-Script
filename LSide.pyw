@@ -696,11 +696,7 @@ class ls():
                 toreturn = self.exec(i, line2, 1)
         return toreturn
             
-            
-    def nextline(self):
-        self.line = 1
-
-        
+              
     def exec(self, function, line, obo = 0):
         func = ""
         function = notab(function)
@@ -791,17 +787,13 @@ def run():
 def run_lbl():
     global reader
     printc('')
-    printc('----Debug line by line | Debug > Next line ----')
+    printc('----Debug line by line ----')
     printc('----- {} -----'.format(file))
     reader = ls(read(file))
     reader.parse(read(file))
     reader.var["noargs"] = [file]
     reader.exec("start(%noargs%)", 0, 1)
-
-
-def nextline():
-    reader.nextline()
-
+    
     
 class askstring():
     def __init__(self, title, message):
@@ -886,7 +878,6 @@ menu3 = Menu(menubar, tearoff=0)
 menu3.add_command(label="Variables", command=seevar)
 menu3.add_command(label="Conditions", command=seecond)
 menu3.add_command(label="Functions", command=seefunc)
-menu3.add_command(label="Next Line", command=nextline)
 menubar.add_cascade(label="Debug", menu=menu3)
 
 root.config(menu=menubar)
