@@ -6,28 +6,6 @@ from threading import Event as _UninterruptibleEvent
 import time
 from math import *
 
-global file
-global text_
-global clicked
-global enter
-clicked = 0
-text_ = ""
-file = "NewFile"
-root = Tk(className = " Light Script IDE - NewFile")
-console = Toplevel(root)
-console.title(" Light Script Result")
-textc = Text(console, insertbackground="white", selectbackground="gray", background="black", foreground='white')
-root['bg'] = 'black'
-frame = Frame(root)
-frame.pack(pady=5, expand=True, fill='both')
-frame.configure(background = 'black')
-text = Text(frame, insertbackground="white", selectbackground="gray", background="black", foreground='white', undo=True)
-text.pack(expand=True, fill='both')
-textc.pack(expand=True, fill='both')
-text_ = text.get("1.0", END)
-tags = []
-menubar = Menu(root)
-
 class showinfo2():
     def __init__(self, root, message):
         self.w = Toplevel(root)
@@ -60,6 +38,56 @@ class askstring():
         self.clicked = True
         self.toreturn = self.e.get()
         self.w.destroy()
+
+        
+class LineNumbers(Text):
+    def __init__(self, master, text_widget, **kwargs):
+        super().__init__(master, **kwargs)
+ 
+        self.text_widget = text_widget
+        self.text_widget.bind('<KeyRelease>', self.on_key_release)
+        self.text_widget.bind('<FocusIn>', self.on_key_release)
+        self.text_widget.bind('<MouseWheel>', self.on_key_release)
+ 
+        self.insert(1.0, '1')
+        self.configure(state='disabled')
+ 
+    def on_key_release(self, event=None):
+        p, q = self.text_widget.index("@0,0").split('.')
+        p = int(p)
+        final_index = str(self.text_widget.index(END))
+        num_of_lines = final_index.split('.')[0]
+        line_numbers_string = "\n".join(str(p + no) for no in range(int(num_of_lines)))
+        width = len(str(num_of_lines))
+ 
+        self.configure(state='normal', width=width)
+        self.delete(1.0, END)
+        self.insert(1.0, line_numbers_string)
+        self.configure(state='disabled')
+
+
+root = Tk(className = " Light Script IDE - NewFile")
+root['bg'] = 'black'
+root.minsize(860, 450)
+console = Toplevel(root)
+console.title(" Light Script Result")
+
+textc = Text(console, insertbackground="white", selectbackground="gray", background="black", foreground='white')
+textc.pack(expand=True, fill='both')
+
+frame = Frame(root)
+frame.pack(pady=5, side=RIGHT, expand=True, fill='both')
+frame.configure(background = 'black')
+
+text = Text(frame, insertbackground="white", selectbackground="gray", background="black", foreground='white', undo=True)
+text.pack(side=RIGHT, expand=True, fill='both')
+ln = LineNumbers(frame, text, width=5, background="black", foreground='lime')
+ln.pack(expand=True, fill=Y)
+
+clicked = 0
+file = "NewFile"
+text_ = text.get("1.0", END)
+tags = []
 
     
 def printc(string):
@@ -852,7 +880,7 @@ class ls():
                 elif func == 10:
                     toreturn = tan(parameters[0])
                 elif func == 11:
-                    toreturn = None # free func
+                    toreturn = type(parameters[0])
                 elif func == 12:
                     toreturn = type(parameters[0])
                     break
@@ -952,26 +980,6 @@ def seecond():
 def seefunc():
     w = debugWindow('Functions', reader.functions)
     return
-
-
-menu1 = Menu(menubar, tearoff=0)
-menu1.add_command(label="Open", command=openFile)
-menu1.add_command(label="Save", command=saveFile)
-menu1.add_separator()
-menu1.add_command(label="Exit", command=exit)
-menubar.add_cascade(label="File", menu=menu1)
-menu2 = Menu(menubar, tearoff=0)
-menu2.add_command(label="Run", command=run)
-menu2.add_command(label="Run Custom...", command=runcustom)
-menu2.add_command(label="Run Line by Line", command=run_lbl)
-menubar.add_cascade(label="Run", menu=menu2)
-menu3 = Menu(menubar, tearoff=0)
-menu3.add_command(label="Variables", command=seevar)
-menu3.add_command(label="Conditions", command=seecond)
-menu3.add_command(label="Functions", command=seefunc)
-menubar.add_cascade(label="Debug", menu=menu3)
-
-root.config(menu=menubar)
 
 
 def scanKeyWord(after):
@@ -1159,5 +1167,28 @@ else:
     if len(argv) > 2:
         printc("LSide only take 1 argument")
 
+
+menubar = Menu(root)
+
+menu1 = Menu(menubar, tearoff=0)
+menu1.add_command(label="Open", command=openFile)
+menu1.add_command(label="Save", command=saveFile)
+menu1.add_separator()
+menu1.add_command(label="Exit", command=exit)
+menubar.add_cascade(label="File", menu=menu1)
+
+menu2 = Menu(menubar, tearoff=0)
+menu2.add_command(label="Run", command=run)
+menu2.add_command(label="Run Custom...", command=runcustom)
+menu2.add_command(label="Run Line by Line", command=run_lbl)
+menubar.add_cascade(label="Run", menu=menu2)
+
+menu3 = Menu(menubar, tearoff=0)
+menu3.add_command(label="Variables", command=seevar)
+menu3.add_command(label="Conditions", command=seecond)
+menu3.add_command(label="Functions", command=seefunc)
+menubar.add_cascade(label="Debug", menu=menu3)
+
+root.config(menu=menubar)
 
 root.mainloop()
