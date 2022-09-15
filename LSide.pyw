@@ -2,10 +2,27 @@ from tkinter import *
 from tkinter.filedialog import *
 from tkinter.messagebox import *
 from sys import argv
-from threading import Event as _UninterruptibleEvent
-import time
 from math import *
 
+class debugWindow():
+    def __init__(self, title, tofollow):
+        self.w = Toplevel(root)
+        self.w.title(title)
+        self.l1 = Listbox(self.w)
+        self.l1.pack(expand=True, fill='both', side = LEFT)
+        self.l2 = Listbox(self.w)
+        self.l2.pack(expand=True, fill='both', side = RIGHT)
+        self.update(tofollow)
+
+
+    def update(self, tofollow):
+        i = 1
+        for x in tofollow:
+            self.l1.insert(i, x)
+            self.l2.insert(i, tofollow[x])
+            i + i + 1
+
+        
 class showinfo2():
     def __init__(self, root, message):
         self.w = Toplevel(root)
@@ -89,7 +106,6 @@ file = "NewFile"
 text_ = text.get("1.0", END)
 tags = []
 
-    
 def printc(string):
     textc.insert(END, str(string) + '\n')
     textc.see("end")
@@ -203,32 +219,6 @@ def searchend(string, pattern):
     return -1
 
 
-def lastline(string, sub):
-    args = [""]
-    alist = 0
-    for i in range(len(string)):
-        if string[i] == '\n':
-            args.append("")
-            alist = alist + 1
-        else:
-            args[alist] = args[alist] + string[i]
-    for i in range(len(args)-1):
-        if search(args[i], sub) != -1:
-            return i
-
-
-def getline(string, line):
-    args = [""]
-    alist = 0
-    for i in range(len(string)):
-        if string[i] == '\n':
-            args.append("")
-            alist = alist + 1
-        else:
-            args[alist] = args[alist] + string[i]
-    return args[line]
-
-
 def getAllLines(string):
     args = [""]
     alist = 0
@@ -244,10 +234,8 @@ def getAllLines(string):
 def isstring(string):
     pos = []
     tosearch = '"'
-    
     if string.find('"') < string.find("'"):
         tosearch = "'"
-        
     if string.find(tosearch) != -1:
         pos.append(string.find(tosearch)+1)
         string2 = string[string.find(tosearch)+1:]
@@ -262,11 +250,11 @@ def isstring(string):
 
 def isvar(string):
     pos = []
-    if search(string, '%') != -1:
-        pos.append(search(string, '%')+1)
-        string2 = string[search(string, '%')+1:]
-        if search(string2, '%') != -1:
-            pos.append(search(string2, '%')+len(string)-len(string2))
+    pos.append(search(string, '%')+1)
+    if pos[0] != 0:
+        string2 = string[pos[0]+1:]
+        pos.append(search(string2, '%')+len(string)-len(string2))
+        if pos[1] != 0:
             return (1, pos)
         else:
             return (0, (0,0))
@@ -276,11 +264,11 @@ def isvar(string):
 
 def iscond(string):
     pos = []
-    if search(string, '$') != -1:
-        pos.append(search(string, '$')+1)
-        string2 = string[search(string, '$')+1:]
-        if search(string2, '$') != -1:
-            pos.append(search(string2, '$')+len(string)-len(string2))
+    pos.append(search(string, '$')+1)
+    if pos[0] != 0:
+        string2 = string[pos[0]+1:]
+        pos.append(search(string2, '$')+len(string)-len(string2))
+        if pos[1] != 0:
             return (1, pos)
         else:
             return (0, (0,0))
@@ -303,7 +291,7 @@ def isfloat(string):
     chars = "0123456789."
     if string != '':
         for i in range(len(string)):
-            if chars.find(string[i]) == -1:
+            if not string[i] in chars:
                 return 0
         return 1
     return 0
@@ -313,7 +301,7 @@ def isint(string):
     chars = "0123456789"
     if string != '':
         for i in range(len(string)):
-            if chars.find(string[i]) == -1:
+            if not string[i] in chars:
                 return 0
         return 1
     return 0
@@ -323,7 +311,7 @@ def isbin(string):
     chars = "0b1"
     if string != '':
         for i in range(len(string)):
-            if chars.find(string[i]) == -1:
+            if not string[i] in chars:
                 return 0
         return 1
     return 0
@@ -333,7 +321,7 @@ def ishex(string):
     chars = "0x123456789ABCDEF"
     if string != '':
         for i in range(len(string)):
-            if chars.find(string[i]) == -1:
+            if not string[i] in chars:
                 return 0
         return 1
     return 0
@@ -366,16 +354,17 @@ def findchar(lists, char):
 
 
 def islist(string):
-    pos = 0
-    if search(string, '[') != -1:
-        pos = search(string, '[')
-        string = string[search(string, '[')+1:]
-        if search(string, ']') != -1:
-            return (1, (pos, search(string, ']')))
+    pos = []
+    pos.append(search(string, '[')+1)
+    if pos[0] != 0:
+        string2 = string[pos[0]+1:]
+        pos.append(search(string2, ']')+len(string)-len(string2))
+        if pos[1] != 0:
+            return (1, pos)
         else:
-            return (0, (0, 0))
+            return (0, (0,0))
     else:
-        return (0, (0, 0))
+        return (0, (0,0))
 
 
 def notab(string):
@@ -417,18 +406,23 @@ def index(script, end):
 
 def getParametersF(function):
     parameters = []
-    after = function[search(function, "(")+1:-2]
-    pos = 1
+    pos=1
+    after = function[search(function, "(")+1:function.rfind(")")]
+    afterr = after
     while pos:
-        if isvar(after)[0]:
-            pos = 1
-            s = isvar(after)
-            parameters.append(after[s[1][0]:s[1][1]])
-            if search(after, ",") == -1:
-                after = after[:-1]
-            after = after[search(after, ",")+1:]
+        if search(after, ",") != -1:
+            afterr = after[:search(after, ",")+1]
+        else:
+            afterr = after
+        s = isvar(afterr)
+        if s[0]:
+            parameters.append(afterr[s[1][0]:s[1][1]])
         else:
             pos = 0
+        if search(after, ",") == -1:
+            after = after[:-1]
+        else:
+            after = after[search(after, ",")+1:]
     return parameters
 
 
@@ -512,14 +506,14 @@ class ls():
         self.default_function["write(%file%, %string%)"] = 1
         self.default_function["read(%file%)"] = 2
         self.default_function["input(%string%)"] = 3
-        self.default_function["return(%to_return%)"] = 4
+        self.default_function["return(%any%)"] = 4
         self.default_function["len(%list%)"] = 5
         self.default_function["goto(%name%)"] = 6
         self.default_function["label(%name%)"] = 7
         self.default_function["sin(%float%)"] = 8
         self.default_function["cos(%float%)"] = 9
         self.default_function["tan(%float%)"] = 10
-        self.default_function[""] = 11
+        self.default_function["lstype(%any%)"] = 11
         self.default_function["type(%any%)"] = 12
         # defining default vars
         self.var["pi"] = pi
@@ -539,33 +533,42 @@ class ls():
                 self.functions[subscript[4:search(subscript, ':')]] = l
 
 
-    def typescan(self, after, line):
+    def typescan(self, after, line, test = 0):
         after = notab(after)
-        if islist(after)[0] and (isvar(after)[1][0] > islist(after)[1][0] or isvar(after)[0] == 0):
-            return self.getlist(after, line)
-        elif isfunc(after):
-            return self.exec(after, line)
-        elif isstring(after)[0]:
-            s = isstring(after)
-            return after[s[1][0]:s[1][1]]
-        elif isint(after):
-            return int(after)
-        elif isfloat(after):
-            return float(after)
-        elif isbin(after):
-            return bin(after)
-        elif ishex(after):
-            return hex(after)
-        elif ismath(after, self.var) and scanOperator(after) != -1:
-            return eval(replacevar(after, self.var))
-        elif isvar(after)[0]:
-            if isvar(after)[1][0] < islist(after)[1][0]:
-                index = getlist(after, self.var)[0]
+        if test == 0:
+            if islist(after)[0] and (isvar(after)[1][0] > islist(after)[1][0] or isvar(after)[0] == 0):
+                return self.getlist(after, line)
+            elif isfunc(after):
+                return self.exec(after, line)
+            elif isstring(after)[0]:
+                s = isstring(after)
+                return after[s[1][0]:s[1][1]]
+            elif isint(after):
+                return int(after)
+            elif isfloat(after):
+                return float(after)
+            elif isbin(after):
+                return bin(after)
+            elif ishex(after):
+                return hex(after)
+            elif ismath(after, self.var) and scanOperator(after) != -1:
+                return eval(replacevar(after, self.var))
+            elif isvar(after)[0]:
+                if isvar(after)[1][0] < islist(after)[1][0]:
+                    index = getlist(after, self.var)[0]
+                    s = isvar(after)
+                    return self.var[after[s[1][0]:s[1][1]]][index]
                 s = isvar(after)
-                return self.var[after[s[1][0]:s[1][1]]][index]
-            s = isvar(after)
-            return self.var[after[s[1][0]:s[1][1]]]
-        return -1
+                return self.var[after[s[1][0]:s[1][1]]]
+            return -1
+        else:
+            if islist(after)[0] and (isvar(after)[1][0] > islist(after)[1][0] or isvar(after)[0] == 0):
+                return 0
+            elif isfunc(after) or isstring(after)[0] or isint(after) or isfloat(after) or isbin(after) or ishex(after):
+                return 0
+            elif (ismath(after, self.var) and scanOperator(after) != -1) or isvar(after)[0]:
+                return 0
+            return -1
 
 
     def tokeytype(self, keytype, after, line):
@@ -641,7 +644,7 @@ class ls():
             else:
                 afterr = after
                 
-            if self.typescan(afterr, line) != -1:
+            if self.typescan(afterr, line, 1) != -1:
                 parameters.append(self.tokeytype(-1, afterr, line))
             else:
                 pos = 0
@@ -855,6 +858,10 @@ class ls():
             nf = i[:search(i, "(")+1]+i[-1:]
             tcf = function[:search(function, "(")+1]+function[-1:]
             if nf == tcf:
+                parametersF = getParametersF(i)
+                if len(parameters) < len(parametersF):
+                    printc("Error: not enough parameters for function `{}', at line {}".format(function, line+1))
+                    return None
                 func = i
                 func = self.default_function[func]
                 if func == 0:
@@ -934,26 +941,6 @@ def run_lbl():
     reader.parse(read(file))
     reader.var["noargs"] = [file]
     reader.exec("start(%noargs%)", 0, 1)
-
-
-class debugWindow():
-    def __init__(self, title, tofollow):
-        self.w = Toplevel(root)
-        self.w.title(title)
-        self.l1 = Listbox(self.w)
-        self.l1.pack(expand=True, fill='both', side = LEFT)
-        self.l2 = Listbox(self.w)
-        self.l2.pack(expand=True, fill='both', side = RIGHT)
-        self.update(tofollow)
-
-
-    def update(self, tofollow):
-        i = 1
-        for x in tofollow:
-            self.l1.insert(i, x)
-            self.l2.insert(i, tofollow[x])
-            i + i + 1
-        
 
 
 def runcustom():
@@ -1078,7 +1065,7 @@ def execc_():
         comment = search(i, "#")
         while jj != iii:
             key = scanKeyWord(i)
-            if key[0] != -1:
+            if key[0] != -1 and comment != -1:
                 tags.append(str(line2)+'.'+str(r+key[0]))
                 text.tag_add(tags[-1], str(line2)+'.'+str(r+key[0]), str(line2)+'.'+str(r+key[1]+1))
                 text.tag_config(tags[-1], foreground="violet")
@@ -1094,12 +1081,12 @@ def execc_():
         jj = 0
         while jj != iii:
             var = isvar(i)
-            if var[0]:
+            if var[0] and comment != -1:
                 tags.append(str(line2)+'.'+str(r+var[1][0]))
                 text.tag_add(tags[-1], str(line2)+'.'+str(r+var[1][0]-1), str(line2)+'.'+str(var[1][1]+1))
                 text.tag_config(tags[-1], foreground="cyan")
                 i = i[var[1][1]:]
-                r = r + 1
+                r = r + var[1][1]
                 iii = len(i)
             else:
                 jj = iii
@@ -1109,12 +1096,12 @@ def execc_():
         jj = 0
         while jj != iii:
             cond = iscond(i)
-            if cond[0]:
+            if cond[0] and comment != -1:
                 tags.append(str(line2)+'.'+str(r+cond[1][0]))
                 text.tag_add(tags[-1], str(line2)+'.'+str(r+cond[1][0]-1), str(line2)+'.'+str(r+cond[1][1]+1))
                 text.tag_config(tags[-1], foreground="orange")
                 i = i[1:]
-                r = r + 1
+                r = r + cond[1][1]
                 iii = len(i)
             else:
                 jj = iii
@@ -1124,12 +1111,12 @@ def execc_():
         jj = 0
         while jj != iii:
             string = isstring(i)
-            if string[0]:
+            if string[0] and comment != -1:
                 tags.append(str(line2)+'.'+str(r+string[1][0]))
                 text.tag_add(tags[-1], str(line2)+'.'+str(r+string[1][0]-1), str(line2)+'.'+str(string[1][1]+1))
                 text.tag_config(tags[-1], foreground="green")
                 i = i[1:]
-                r = r + 1
+                r = r + string[1][1]
                 iii = len(i)
             else:
                 jj = iii
@@ -1152,6 +1139,7 @@ def check():
         text_ = text.get("1.0", END)
         execc_()
     root.after(500, check)
+    
   
 root.after(500, check)
 if len(argv) == 2:
