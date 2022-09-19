@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter.filedialog import *
 from tkinter.messagebox import *
+
 from sys import argv
 from math import *
 
@@ -45,13 +46,15 @@ class askstring():
         Label(self.w, text=message).pack(expand=True, fill='y', side = TOP)
         self.e = Entry(self.w)
         self.e.pack(expand=True, fill='y')
+        self.e.focus()
+        self.w.bind('<Return>', lambda evt: self.clickedtrue(self))
         Button(self.w, text="OK", command=lambda: self.clickedtrue(self)).pack(expand=True, fill='y', side = BOTTOM)
         root.wait_window(self.w)
         self.value = self.toreturn
         return self.toreturn
 
     
-    def clickedtrue(self):
+    def clickedtrue(self, event=None):
         self.clicked = True
         self.toreturn = self.e.get()
         self.w.destroy()
@@ -66,12 +69,12 @@ class LineNumbers(Text):
         self.text_widget.bind('<FocusIn>', self.on_key_release)
         self.text_widget.bind('<MouseWheel>', self.on_key_release)
  
-        self.insert(1.0, '1')
+        self.insert(1.0, '0')
         self.configure(state='disabled')
  
     def on_key_release(self, event=None):
         p, q = self.text_widget.index("@0,0").split('.')
-        p = int(p)
+        p = int(p)-1
         final_index = str(self.text_widget.index(END))
         num_of_lines = final_index.split('.')[0]
         line_numbers_string = "\n".join(str(p + no) for no in range(int(num_of_lines)))
@@ -100,6 +103,7 @@ text = Text(frame, insertbackground="white", selectbackground="gray", background
 text.pack(side=RIGHT, expand=True, fill='both')
 ln = LineNumbers(frame, text, width=5, background="black", foreground='lime')
 ln.pack(expand=True, fill=Y)
+ln.on_key_release()
 
 clicked = 0
 file = "NewFile"
@@ -987,7 +991,7 @@ class ls():
 global reader
 reader = ls("")
 
-def openFile():
+def openFile(e = None):
     global file
     file = askopenfilename(title="Open",filetypes=[('Light Script files','.ls'),('all files','.*')])
     with open(file, 'r') as f:
@@ -997,7 +1001,7 @@ def openFile():
     return 0
 
 
-def saveFile():
+def saveFile(e = None):
     global file
     root.title(' Light Script IDE - ' + file)
     if file == "NewFile":
@@ -1009,7 +1013,7 @@ def saveFile():
     return 0
 
 
-def run():
+def run(e = None):
     global reader
     printc('')
     printc('----- {} -----'.format(file))
@@ -1246,14 +1250,18 @@ else:
 menubar = Menu(root)
 
 menu1 = Menu(menubar, tearoff=0)
-menu1.add_command(label="Open", command=openFile)
-menu1.add_command(label="Save", command=saveFile)
+menu1.add_command(label="Open     ctrl+o", command=openFile)
+root.bind_all('<Control-o>', openFile)
+menu1.add_command(label="Save      ctrl+s", command=saveFile)
+root.bind_all('<Control-s>', saveFile)
 menu1.add_separator()
-menu1.add_command(label="Exit", command=exit)
+menu1.add_command(label="Exit        ctrl+/", command=exit)
+root.bind_all('<Control-slash>', exit)
 menubar.add_cascade(label="File", menu=menu1)
 
 menu2 = Menu(menubar, tearoff=0)
-menu2.add_command(label="Run", command=run)
+menu2.add_command(label="Run         F5", command=run)
+root.bind_all('<F5>', run)
 menu2.add_command(label="Run Custom...", command=runcustom)
 menu2.add_command(label="Run Line by Line", command=run_lbl)
 menubar.add_cascade(label="Run", menu=menu2)
