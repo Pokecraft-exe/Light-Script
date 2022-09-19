@@ -219,6 +219,53 @@ def searchend(string, pattern):
     return -1
 
 
+def searchOuttaAll(string, pattern):
+    isinstring = 0
+    first = ""
+    string = string+' '
+    M = len(pattern)
+    N = len(string)
+    if len(pattern) == 1:
+        return search_one(string, pattern)
+    for i in range(N-M):
+        jj = 0
+        if string[i] == '"':
+            if isinstring == 1:
+                if string[i] == first:
+                    isinstring = 0
+            else:
+                isinstring = 1
+                first = '"'
+        elif string[i] == "'":
+            if isinstring == 1:
+                if string[i] == first:
+                    isinstring = 0
+            else:
+                isinstring = 1
+                first = "'"
+        elif string[i] == "%":
+            if isinstring == 1:
+                if string[i] == first:
+                    isinstring = 0
+            else:
+                isinstring = 1
+                first = "%"
+        elif string[i] == "$":
+            if isinstring == 1:
+                if string[i] == first:
+                    isinstring = 0
+            else:
+                isinstring = 1
+                first = "$"
+        for j in range(M):
+            if string[i + j] != pattern[j]:
+                break;
+            jj = j
+        if jj == (M-1) and isinstring == 0:
+            return i
+    return -1
+
+
 def getAllLines(string):
     args = [""]
     alist = 0
@@ -254,7 +301,7 @@ def isvar(string):
     if pos[0] != 0:
         string2 = string[pos[0]+1:]
         pos.append(search(string2, '%')+len(string)-len(string2))
-        if pos[1] != 0:
+        if pos[1] > pos[0]:
             return (1, pos)
         else:
             return (0, (0,0))
@@ -268,7 +315,7 @@ def iscond(string):
     if pos[0] != 0:
         string2 = string[pos[0]+1:]
         pos.append(search(string2, '$')+len(string)-len(string2))
-        if pos[1] != 0:
+        if pos[1] > pos[0]:
             return (1, pos)
         else:
             return (0, (0,0))
@@ -337,12 +384,11 @@ def replacevar(string, var):
 
 
 def ismath(string, var):
-    if scanOperator != -1:
-        try:
-            s = eval(replacevar(string, var))
-            return 1
-        except:
-            return 0
+    try:
+        s = eval(replacevar(string, var))
+        return 1
+    except:
+        return 0
 
 
 def findchar(lists, char):
@@ -359,7 +405,7 @@ def islist(string):
     if pos[0] != 0:
         string2 = string[pos[0]+1:]
         pos.append(search(string2, ']')+len(string)-len(string2))
-        if pos[1] != 0:
+        if pos[1] > pos[0]:
             return (1, pos)
         else:
             return (0, (0,0))
@@ -443,15 +489,15 @@ def scanCondType(after):
 
 
 def scankeyType(after):
-    if search(after, "int") != -1:
+    if searchOuttaAll(after, "int") != -1:
         return "int"
-    elif search(after, "str") != -1:
+    elif searchOuttaAll(after, "str") != -1:
         return "str"
-    elif search(after, "float") != -1:
+    elif searchOuttaAll(after, "float") != -1:
         return "float"
-    elif search(after, "bin") != -1:
+    elif searchOuttaAll(after, "bin") != -1:
         return "bin"
-    elif search(after, "hex") != -1:
+    elif searchOuttaAll(after, "hex") != -1:
         return "hex"
     return -1
 
@@ -469,6 +515,10 @@ def scanOperatorEqual(after):
         return "/="
     elif search(after, "%=") != -1 and isvar(after) == -1:
         return "%="
+    elif search(after, "^=") != -1:
+        return "^="
+    elif search(after, "->") != -1:
+        return "->"
     elif search(after, "=") != -1:
         return "="
     return -1
@@ -485,6 +535,8 @@ def scanOperator(after):
         return "-"
     elif search(after, "/") != -1:
         return "/"
+    elif search(after, "^") != -1:
+        return "^"
     elif search(after, "%") != -1 and isvar(after) == -1:
         return "%"
     return -1
@@ -517,13 +569,20 @@ class ls():
         self.default_function["type(%any%)"] = 12
         # defining default vars
         self.var["pi"] = pi
+        skip = 0
         for i in getAllLines(script):
-            if search(i, '#') != -1:
-                if i[:search(i, '#')] != '\n':
+            if skip != 1:
+                if search(i, '#') != -1:
                     self.script.append(i[:search(i, '#')])
+                else:
+                    comma = search(i, ';')
+                    if comma != -1:
+                        self.script.append(i[:comma])
+                        self.script.append(i[comma+1:])
+                    else:
+                        self.script.append(i)
             else:
-                if i != '\n':
-                    self.script.append(i)            
+                skip = 0
 
 
     def parse(self, script):
@@ -563,33 +622,42 @@ class ls():
             return -1
         else:
             if islist(after)[0] and (isvar(after)[1][0] > islist(after)[1][0] or isvar(after)[0] == 0):
-                return 0
-            elif isfunc(after) or isstring(after)[0] or isint(after) or isfloat(after) or isbin(after) or ishex(after):
-                return 0
-            elif (ismath(after, self.var) and scanOperator(after) != -1) or isvar(after)[0]:
-                return 0
+                return "list"
+            elif isfunc(after):
+                return "function"
+            elif isstring(after)[0]:
+                return "string"
+            elif isint(after):
+                return "int"
+            elif isfloat(after):
+                return "float"
+            elif isbin(after):
+                return "bin"
+            elif ishex(after):
+                return "hex"
+            elif ismath(after, self.var) and scanOperator(after) != -1:
+                return "float"
+            elif isvar(after)[0]:
+                return "var"
             return -1
 
 
     def tokeytype(self, keytype, after, line):
-        try:
-            if keytype == "int":
-                return int(self.typescan(after, line))
-            elif keytype == "str":
-                return str(self.typescan(after, line))
-            elif keytype == "float":
-                return float(self.typescan(after, line))
-            elif keytype == "bin":
-                return bin(self.typescan(after, line))
-            elif keytype == "hex":
-                return hex(self.typescan(after, line))
-            else:
-                return self.typescan(after, line)
-        except:
-            toR = self.typescan(after, line)
-            printc("Error at line {}, can't convert type {} into {}".format(line, type(toR), keytype))
-            return toR
-
+        if keytype == -1:
+            return self.typescan(after, line)
+        elif keytype == "int":
+            return int(self.typescan(after, line))
+        elif keytype == "str":
+            return str(self.typescan(after, line))
+        elif keytype == "float":
+            return float(self.typescan(after, line))
+        elif keytype == "bin":
+            return bin(self.typescan(after, line))
+        elif keytype == "hex":
+            return hex(self.typescan(after, line))
+        else:
+            return self.typescan(after, line)
+        
             
     def scanVarI(self, l, line):
         pos = isvar(l)
@@ -598,6 +666,8 @@ class ls():
         after = l[posint+len(tosearch):]
         posi = pos[1]
         keytype = scankeyType(l)
+        if tosearch == "->":
+            self.scanPointI(l, line)
         if posint > islist(l)[1][0] and islist(l)[0] != 0:
             index = self.getlist(l, line)[0]
             if tosearch == "**=":
@@ -612,6 +682,8 @@ class ls():
                 self.var[l[posi[0]:posi[1]]][index] = self.var[l[posi[0]:posi[1]]][index] / self.tokeytype(keytype, after, line)
             elif tosearch == "%=":
                 self.var[l[posi[0]:posi[1]]][index] = self.var[l[posi[0]:posi[1]]][index] % self.tokeytype(keytype, after, line)
+            elif tosearch == "^=":
+                self.var[l[posi[0]:posi[1]]][index] = self.tokeytype(keytype, after, line) ^ semf.tokeytype(keytype, after, line)
             elif tosearch == "=":
                 self.var[l[posi[0]:posi[1]]][index] = self.tokeytype(keytype, after, line)
         else:
@@ -627,8 +699,11 @@ class ls():
                 self.var[l[posi[0]:posi[1]]] = self.var[l[posi[0]:posi[1]]] / self.tokeytype(keytype, after, line)
             elif tosearch == "%=":
                 self.var[l[posi[0]:posi[1]]] = self.var[l[posi[0]:posi[1]]] % self.tokeytype(keytype, after, line)
+            elif tosearch == "^=":
+                self.var[l[posi[0]:posi[1]]] = self.var[l[posi[0]:posi[1]]] ^ self.tokeytype(keytype, after, line)
             elif tosearch == "=":
                 self.var[l[posi[0]:posi[1]]] = self.tokeytype(keytype, after, line)
+
 
     def getParameters(self, function, line):
         parameters = []
@@ -685,6 +760,18 @@ class ls():
         after = l[search(l, "=")+1:]
         posi = pos[1]
         self.condition[l[posi[0]:posi[1]]] = notab(after)
+
+
+    def scanPointI(self, l, line):
+        before = l[:search(l, "->")]
+        after = notab(l[searchend(l, "->"):])
+        pos = isvar(after)[1]
+        after = after[pos[0]:pos[1]]
+        if self.typescan(before, line, 1) == "var":
+            self.var[after] = '&'+before
+        else:
+            self.scanVarI(self.var[after]+'='+before, line)
+        return
 
             
     def condI(self, l, line):
@@ -1065,7 +1152,7 @@ def execc_():
         comment = search(i, "#")
         while jj != iii:
             key = scanKeyWord(i)
-            if key[0] != -1 and comment != -1:
+            if key[0] != -1:
                 tags.append(str(line2)+'.'+str(r+key[0]))
                 text.tag_add(tags[-1], str(line2)+'.'+str(r+key[0]), str(line2)+'.'+str(r+key[1]+1))
                 text.tag_config(tags[-1], foreground="violet")
@@ -1081,12 +1168,12 @@ def execc_():
         jj = 0
         while jj != iii:
             var = isvar(i)
-            if var[0] and comment != -1:
+            if var[0]:
                 tags.append(str(line2)+'.'+str(r+var[1][0]))
                 text.tag_add(tags[-1], str(line2)+'.'+str(r+var[1][0]-1), str(line2)+'.'+str(var[1][1]+1))
                 text.tag_config(tags[-1], foreground="cyan")
                 i = i[var[1][1]:]
-                r = r + var[1][1]
+                r = r + 1
                 iii = len(i)
             else:
                 jj = iii
@@ -1096,12 +1183,12 @@ def execc_():
         jj = 0
         while jj != iii:
             cond = iscond(i)
-            if cond[0] and comment != -1:
+            if cond[0]:
                 tags.append(str(line2)+'.'+str(r+cond[1][0]))
                 text.tag_add(tags[-1], str(line2)+'.'+str(r+cond[1][0]-1), str(line2)+'.'+str(r+cond[1][1]+1))
                 text.tag_config(tags[-1], foreground="orange")
                 i = i[1:]
-                r = r + cond[1][1]
+                r = r + 1
                 iii = len(i)
             else:
                 jj = iii
@@ -1111,12 +1198,12 @@ def execc_():
         jj = 0
         while jj != iii:
             string = isstring(i)
-            if string[0] and comment != -1:
+            if string[0]:
                 tags.append(str(line2)+'.'+str(r+string[1][0]))
                 text.tag_add(tags[-1], str(line2)+'.'+str(r+string[1][0]-1), str(line2)+'.'+str(string[1][1]+1))
                 text.tag_config(tags[-1], foreground="green")
                 i = i[1:]
-                r = r + string[1][1]
+                r = r + 1
                 iii = len(i)
             else:
                 jj = iii
