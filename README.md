@@ -15,9 +15,15 @@ The language is included
 
 # To to do
 dict </br>
+
 list managment [:1] [1:] [$] </br>
+
 %... args% </br>
+
 threads </br>
+
 sync / async </br>
+
 function as variable lambda </br>
+
 windows </br>
