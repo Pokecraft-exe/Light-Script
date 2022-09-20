@@ -2,7 +2,7 @@
 
 The light script language is a programmation language used in site making.
 
-No need to get LSpy.py when you have LSide.py
+No need to get [LSpy.py](<https://github.com/Pokecraft-exe/Light-Script/blob/main/LSide.pyw>) when you have [LSide.py](https://github.com/Pokecraft-exe/Light-Script/blob/main/LSpy.py)
 
 Use `python LSpy.py [file]` to run your .ls code
 
