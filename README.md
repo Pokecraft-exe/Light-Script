@@ -10,7 +10,7 @@ Use `python LSpy.py [file]` to run your .ls code.
 
 ## LS IDE.pyw
 
-The language is included.
+The language is included in the package.
 
 ![image](https://user-images.githubusercontent.com/67156699/188330887-0ff13c9f-81d7-477b-b332-932430a63b6e.png)
 
