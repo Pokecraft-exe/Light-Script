@@ -1,190 +1,142 @@
 #pragma once
 
 #include <iostream>
-#include <fstream>
 #include <sstream>
+#include <fstream>
+#include <math.h>
 #include <string>
 #include <vector>
 #include <map>
-#include <cstdlib>
-#include <type_traits>
-#include <utility>
-#include <typeinfo>
-#include <cassert>
-#include <bitset>
+# define M_PI (float)3.141592653589793
 using namespace std;
 
-template <class T>
-using StorageType = typename decay<T>::type; 
-struct Any
-{
-    bool is_null() const { return !ptr; }
-    bool not_null() const { return ptr; }
-
-    template<typename U> Any(U&& value)
-        : ptr(new Derived<StorageType<U>>(forward<U>(value)))
-    {
-
-    }
-
-    template<class U> bool is() const
-    {
-        typedef StorageType<U> T;
-
-        auto derived = dynamic_cast<Derived<T>*> (ptr);
-
-        return derived;
-    }
-
-    template<class U>
-    StorageType<U>& as()
-    {
-        typedef StorageType<U> T;
-
-        auto derived = dynamic_cast<Derived<T>*> (ptr);
-
-        if (!derived)
-            throw bad_cast();
-
-        return derived->value;
-    }
-
-    template<class U>
-    operator U()
-    {
-        return as<StorageType<U>>();
-    }
-
-    Any()
-        : ptr(nullptr)
-    {
-
-    }
-
-    Any(Any& that)
-        : ptr(that.clone())
-    {
-
-    }
-
-    Any(Any&& that)
-        : ptr(that.ptr)
-    {
-        that.ptr = nullptr;
-    }
-
-    Any(const Any& that)
-        : ptr(that.clone())
-    {
-
-    }
-
-    Any(const Any&& that)
-        : ptr(that.clone())
-    {
-
-    }
-
-    Any& operator=(const Any& a)
-    {
-        if (ptr == a.ptr)
-            return *this;
-
-        auto old_ptr = ptr;
-
-        ptr = a.clone();
-
-        if (old_ptr)
-            delete old_ptr;
-
-        return *this;
-    }
-
-    Any& operator=(Any&& a)
-    {
-        if (ptr == a.ptr)
-            return *this;
-
-        swap(ptr, a.ptr);
-
-        return *this;
-    }
-    
-    void print() {
-    	if (is<int>()) {cout << as<int>();}
-		if (is<float>()) {cout << as<float>();}
-		if (is<string>()) {cout << as<string>();}
-	}
-
-    ~Any()
-    {
-        if (ptr)
-            delete ptr;
-    }
-
+class LSobject {
 private:
-    struct Base
-    {
-        virtual ~Base() {}
-
-        virtual Base* clone() const = 0;
-    };
-
-    template<typename T>
-    struct Derived : Base
-    {
-        template<typename U> Derived(U&& value) : value(forward<U>(value)) { }
-
-        T value;
-
-        Base* clone() const { return new Derived<T>(value); }
-    };
-
-    Base* clone() const
-    {
-        if (ptr)
-            return ptr->clone();
-        else
-            return nullptr;
-    }
-
-    Base* ptr;
+	string s = "0";
+	vector<LSobject> l;
+	char type = 'i';
+public:
+	LSobject() {
+		s="0";
+	}
+	LSobject(long int new_int) {
+		s = to_string(new_int);
+		l = {};
+		type = 'i';
+	}
+	LSobject(int new_int) {
+		s = to_string(new_int);
+		l = {};
+		type = 'i';
+	}
+	LSobject(double new_float) {
+		s = to_string(new_float);
+		l = {};
+		type = 'f';
+	}
+	LSobject(float new_float) {
+		s = to_string(new_float);
+		l = {};
+		type = 'f';
+	}
+	LSobject(string new_string) {
+		s = new_string;
+		l = {};
+		type = 's';
+	}
+	LSobject(const char* new_string) {
+		s = new_string;
+		l = {};
+		type = 's';
+	}
+	LSobject(vector<LSobject> new_vector) {
+		s = "0";
+		l = new_vector;
+		type = 'l';
+	}
+	LSobject(initializer_list<LSobject> new_vector) {
+		s = "0";
+		l = new_vector;
+		type = 'l';
+	}
+	void append(LSobject o){
+		s = "0";
+		l.push_back(o);
+		type = 'l';
+	}
+	void replace(int index, LSobject o){
+		s = "0";
+		l[index] = o;
+		type = 'l';
+	}
+	void no_null(){
+		s = "0";
+		l.push_back(0);
+		type = 'i';
+	}
+	bool is(char t) {if (t == type) {return 1;}return 0;}
+    vector<LSobject> as_list() {return l;}
+    string print() {
+    	string ss;
+		if (type == 'l') {
+			ss += '[';
+			int size = this->l.size();
+    		for(int x = 0; x < size-1; x++){
+    			ss += this->l[x].str() + ", ";
+  			}
+  			ss += this->l[size-1].str();
+  			return ss + ']';
+		} else {
+			return this->s;
+		}
+		return ss;
+	}
+    float asf() {
+    	if (type == 'i') {
+    		return (float)stoi(s);
+		} else if (type == 's') {
+			return stof(s);
+		} else if (type == 'f'){
+			return stof(s);
+		} else {
+			return 0.0;
+		}
+	}
+	long int as_int() {return (long int)asf();}
+	string str() {return print();}
+	bool operator==(LSobject b) {
+		if ((is('i') || is('f')) && (b.is('i') || b.is('f'))) {
+			if (asf() == b.asf()) {return 1;}
+		} else if (is('s') && b.is('s')) {
+			if (str() == b.str()) {return 1;}
+		}
+		return 0;
+	}
+	bool operator!=(LSobject b) {
+		if ((is('i') || is('f')) && (b.is('i') || b.is('f'))) {
+			if (asf() == b.asf()) {return 0;}
+		} else if (is('s') && b.is('s')) {
+			if (str() == b.str()) {return 0;}
+		}
+		return 1;
+	}
+	bool operator>=(LSobject b) {
+		if ((is('i') || is('f')) && (b.is('i') || b.is('f'))) {
+			if (asf() >= b.asf()) {return 1;}
+		}
+		return 0;
+	}
+	bool operator<=(LSobject b) {return !(asf() >= b.asf());}
+	bool operator>(LSobject b) {
+		if ((is('i') || is('f')) && (b.is('i') || b.is('f'))) {
+			if (asf() > b.asf()) {return 1;}
+		}
+		return 0;
+	}
+	bool operator<(LSobject b) {return !(asf() > b.asf());}
 };
 
-template<std::size_t N>
-bool operator<(const std::bitset<N>& x, const std::bitset<N>& y)
-{
-    for (int i = N-1; i >= 0; i--) {
-        if (x[i] ^ y[i]) return y[i];
-    }
-    return false;
-}
-
-template<std::size_t N>
-bool operator>(const std::bitset<N>& x, const std::bitset<N>& y)
-{
-    for (int i = N-1; i >= 0; i--) {
-        if (y[i] ^ x[i]) return x[i];
-    }
-    return false;
-}
-
-template<std::size_t N>
-bool operator<=(const std::bitset<N>& x, const std::bitset<N>& y)
-{
-    if (x < y || x == y) {return true;}
-    return false;
-}
-
-template<std::size_t N>
-bool operator>=(const std::bitset<N>& x, const std::bitset<N>& y)
-{
-    if (x > y || x == y) {return true;}
-    return false;
-}
-
-typedef vector<Any> list;
-typedef map<string, Any> dict;
+typedef map<string, LSobject> dict;
 
 void replaceAll(string& s, const string& search, const string& replace);
 vector<string> read(string file);
@@ -195,26 +147,30 @@ int lastline(string s, string sub);
 string getline(string s, int line);
 vector<string> getAllLines(string s);
 bool isstring(string str);
-int* getstring(string str);
+vector<unsigned int> getstring(string str);
 bool isvar(string str);
-int* getvar(string str);
+vector<int> getvar(string str);
 int iscond(string str);
-int* getcond(string str);
+vector<int> getcond(string str);
 bool isfunc(string s);
 bool isfloat(string s);
 bool isint(string s);
+bool isbin(string s);
+string getbin(long int a);
+template< typename T >
+string to_hex( T i );
+bool ishex(string s);
 string replacevar(string s, dict var);
-string scanCondType(string after);
-string scanOperator(string after);
-int calculate(string s);
+LSobject scankeyType(string after);
+LSobject scanCondType(string after);
+LSobject scanOperator(string after);
+long int calculate(string s);
 bool ismath(string str, dict var);
 int findchar(string s, char chr);
 bool bislist(string str);
-int* islist(string str);
+vector<int> islist(string str);
 string notab(string str);
-list getlist(string str, dict var);
-list getParametersF(std::string function);
-list getParameters(string function, dict var);
+vector<string> getParametersF(std::string function);
 
 class ls {
 private:
@@ -228,10 +184,15 @@ public:
 
     ls(vector<string> script_);
     void parse();
-    Any typescan(string after);
-    void scanVarI(string l);
+    LSobject typescan(string after, int line);
+    LSobject typescan_test(string after);
+    LSobject tokeytype(string keytype, string after, int line);
+    void scanVarI(string l, int line);
+    LSobject getParameters(string function, int line);
+    LSobject getlist(string str, int line);
     void scanCondI(string l);
-    Any condI(string l, int line);
-    Any exec_(string i, int line, list parameters, string function, bool one = 0);
-    Any exec(string function, int line);
+    void scanPointI(string l, int line);
+    LSobject condI(string l, int line);
+    LSobject exec_(string i, int line, LSobject parameters, string function, bool one = 0);
+    LSobject exec(string function, int line);
 };
