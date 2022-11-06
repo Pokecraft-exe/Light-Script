@@ -1,7 +1,6 @@
 from tkinter import *
 from tkinter.filedialog import *
 from tkinter.messagebox import *
-
 from sys import argv
 from math import *
 
@@ -109,6 +108,16 @@ clicked = 0
 file = "NewFile"
 text_ = text.get("1.0", END)
 tags = []
+
+def cache(function):
+    cache = {}
+
+    def wrapper(*args, **kwargs):
+        key = str(args) + str(kwargs)
+        if key not in cache:
+            cache[key] = function(*args, **kwargs)
+        return cache[key]
+    return wrapper
 
 def printc(string):
     textc.insert(END, str(string) + '\n')
@@ -270,13 +279,16 @@ def searchOuttaAll(string, pattern):
     return -1
 
 
-def getAllLines(string):
+def getAllLines(string, iside = 0):
     args = [""]
     alist = 0
+    isAltSix = 0
     for i in range(len(string)):
-        if string[i] == '\n':
+        if string[i] == '\n' and string[i-1] != '|':
             args.append("")
             alist = alist + 1
+        elif string[i-1] == '|' and string[i] == '\n' and iside == 0:
+            args[alist] = args[alist][:len(args[alist])-1]
         else:
             args[alist] = args[alist] + string[i]
     return args
@@ -299,6 +311,7 @@ def isstring(string):
         return (0, (0,0))
 
 
+@cache
 def isvar(string):
     pos = []
     pos.append(search(string, '%')+1)
@@ -313,6 +326,7 @@ def isvar(string):
         return (0, (0,0))
 
 
+@cache
 def iscond(string):
     pos = []
     pos.append(search(string, '$')+1)
@@ -326,7 +340,8 @@ def iscond(string):
     else:
         return (0, (0,0))
 
-    
+
+@cache    
 def isfunc(string):
     pos = []
     if search(string, '(') != -1:
@@ -338,6 +353,7 @@ def isfunc(string):
         return 0
 
 
+@cache
 def isfloat(string):
     chars = "0123456789."
     if string != '':
@@ -348,6 +364,7 @@ def isfloat(string):
     return 0
     
 
+@cache
 def isint(string):
     chars = "0123456789"
     if string != '':
@@ -358,6 +375,7 @@ def isint(string):
     return 0
 
 
+@cache
 def isbin(string):
     chars = "0b1"
     if string != '':
@@ -368,6 +386,7 @@ def isbin(string):
     return 0
 
 
+@cache
 def ishex(string):
     chars = "0x123456789ABCDEF"
     if string != '':
@@ -466,7 +485,7 @@ def getParametersF(function):
             afterr = after
         s = isvar(afterr)
         if s[0]:
-            parameters.append(afterr[s[1][0]:s[1][1]])
+            parameters.append(afterr[:s[1][1]+1])
         else:
             pos = 0
         if search(after, ",") == -1:
@@ -476,6 +495,7 @@ def getParametersF(function):
     return parameters
 
 
+@cache
 def scanCondType(after):
     if search(after, "==") != -1:
         return "=="
@@ -492,6 +512,7 @@ def scanCondType(after):
     return -1
 
 
+@cache
 def scankeyType(after):
     if searchOuttaAll(after, "int") != -1:
         return "int"
@@ -503,9 +524,14 @@ def scankeyType(after):
         return "bin"
     elif searchOuttaAll(after, "hex") != -1:
         return "hex"
+    elif searchOuttaAll(after, "global") != -1:
+        return "global"
+    elif searchOuttaAll(after, "raw") != -1:
+        return "raw"
     return -1
 
 
+@cache
 def scanOperatorEqual(after):
     if search(after, "**=") != -1:
         return "**="
@@ -528,6 +554,7 @@ def scanOperatorEqual(after):
     return -1
 
 
+@cache
 def scanOperator(after):
     if search(after, "**") != -1:
         return "**"
@@ -554,6 +581,7 @@ class ls():
         self.condition = {}
         self.var = {}
         self.default_function = {}
+        self.current_function = ""
         # defining default functions
         self.default_function[""] = -1
         self.default_function["print(%any%)"] = 0
@@ -571,22 +599,19 @@ class ls():
         self.default_function["tan(%float%)"] = 10
         self.default_function["lstype(%any%)"] = 11
         self.default_function["type(%any%)"] = 12
+        self.default_function["free(%any%)"] = 13
         # defining default vars
         self.var["pi"] = pi
-        skip = 0
         for i in getAllLines(script):
-            if skip != 1:
-                if search(i, '#') != -1:
-                    self.script.append(i[:search(i, '#')])
-                else:
-                    comma = search(i, ';')
-                    if comma != -1:
-                        self.script.append(i[:comma])
-                        self.script.append(i[comma+1:])
-                    else:
-                        self.script.append(i)
+            if search(i, '#') != -1:
+                self.script.append(i[:search(i, '#')])
             else:
-                skip = 0
+                comma = search(i, ';')
+                if comma != -1:
+                    self.script.append(i[:comma])
+                    self.script.append(i[comma+1:])
+                else:
+                    self.script.append(i)
 
 
     def parse(self, script):
@@ -596,13 +621,13 @@ class ls():
                 self.functions[subscript[4:search(subscript, ':')]] = l
 
 
-    def typescan(self, after, line, test = 0):
-        after = notab(after)
+    def typescan(self, after, line, function = "", test = 0):
+        after = notab(str(after))
         if test == 0:
             if islist(after)[0] and (isvar(after)[1][0] > islist(after)[1][0] or isvar(after)[0] == 0):
-                return self.getlist(after, line)
+                return self.getlist(after, line, function)
             elif isfunc(after):
-                return self.exec(after, line)
+                return self.exec(after, line, function)
             elif isstring(after)[0]:
                 s = isstring(after)
                 return after[s[1][0]:s[1][1]]
@@ -617,12 +642,23 @@ class ls():
             elif ismath(after, self.var) and scanOperator(after) != -1:
                 return eval(replacevar(after, self.var))
             elif isvar(after)[0]:
-                if isvar(after)[1][0] < islist(after)[1][0]:
-                    index = getlist(after, self.var)[0]
-                    s = isvar(after)
-                    return self.var[after[s[1][0]:s[1][1]]][index]
                 s = isvar(after)
-                return self.var[after[s[1][0]:s[1][1]]]
+                if after[s[1][0]:s[1][1]] in self.var:
+                    if isvar(after)[1][0] < islist(after)[1][0]:
+                        index = getlist(after, self.var)[0]
+                        return self.var[after[s[1][0]:s[1][1]]][index]
+                    return self.var[after[s[1][0]:s[1][1]]]
+                else:
+                    if function+'.'+after[s[1][0]:s[1][1]] in self.var:
+                        if isvar(after)[1][0] < islist(after)[1][0]:
+                            index = getlist(after, self.var)[0]
+                            return self.var[function+'.'+after[s[1][0]:s[1][1]]][index]
+                        return self.var[function+'.'+after[s[1][0]:s[1][1]]]
+                    else:
+                        printc(f"Error at line {line}, variable `{str(function)+'.'+after[s[1][0]:s[1][1]]}' referenced before assignent.")
+                        printc("Prehaps you have forgot `raw' or `global' ?")
+                        return -1
+                return 0
             return -1
         else:
             if islist(after)[0] and (isvar(after)[1][0] > islist(after)[1][0] or isvar(after)[0] == 0):
@@ -646,70 +682,76 @@ class ls():
             return -1
 
 
-    def tokeytype(self, keytype, after, line):
+    def tokeytype(self, keytype, after, line, function):
         if keytype == -1:
-            return self.typescan(after, line)
+            return self.typescan(after, line, function)
         elif keytype == "int":
-            return int(self.typescan(after, line))
+            return int(self.typescan(after, line, function))
         elif keytype == "str":
-            return str(self.typescan(after, line))
+            return str(self.typescan(after, line, function))
         elif keytype == "float":
-            return float(self.typescan(after, line))
+            return float(self.typescan(after, line, function))
         elif keytype == "bin":
-            return bin(self.typescan(after, line))
+            return bin(self.typescan(after, line, function))
         elif keytype == "hex":
-            return hex(self.typescan(after, line))
+            return hex(self.typescan(after, line, function))
         else:
-            return self.typescan(after, line)
+            return self.typescan(after, line, function)
         
             
-    def scanVarI(self, l, line):
+    def scanVarI(self, l, line, function):
         pos = isvar(l)
         tosearch = scanOperatorEqual(l)
         posint = search(l, tosearch)
         after = l[posint+len(tosearch):]
         posi = pos[1]
         keytype = scankeyType(l)
+        ll = l
         if tosearch == "->":
-            self.scanPointI(l, line)
-        if posint > islist(l)[1][0] and islist(l)[0] != 0:
-            index = self.getlist(l, line)[0]
+            self.scanPointI(l, line, function)
+            return
+        if keytype == "global":
+            l = l[posi[0]:posi[1]]
+        else:
+            l = function+'.'+l[posi[0]:posi[1]]
+        if posint > islist(ll)[1][0] and islist(ll)[0] != 0:
+            index = self.getlist(ll, line, function)[0]
             if tosearch == "**=":
-                self.var[l[posi[0]:posi[1]]][index] = self.var[l[posi[0]:posi[1]]][index] ** self.tokeytype(keytype, after, line)
+                self.var[l][index] = self.var[l][index] ** self.tokeytype(keytype, after, line, function)
             elif tosearch == "*=":
-                self.var[l[posi[0]:posi[1]]][index] = self.var[l[posi[0]:posi[1]]][index] * self.tokeytype(keytype, after, line)
+                self.var[l][index] = self.var[l][index] * self.tokeytype(keytype, after, line, function)
             elif tosearch == "+=":
-                self.var[l[posi[0]:posi[1]]][index] = self.var[l[posi[0]:posi[1]]][index] + self.tokeytype(keytype, after, line)
+                self.var[l][index] = self.var[l][index] + self.tokeytype(keytype, after, line, function)
             elif tosearch == "-=":
-                self.var[l[posi[0]:posi[1]]][index] = self.var[l[posi[0]:posi[1]]][index] - self.tokeytype(keytype, after, line)
+                self.var[l][index] = self.var[l][index] - self.tokeytype(keytype, after, line, function)
             elif tosearch == "/=":
-                self.var[l[posi[0]:posi[1]]][index] = self.var[l[posi[0]:posi[1]]][index] / self.tokeytype(keytype, after, line)
+                self.var[l][index] = self.var[l][index] / self.tokeytype(keytype, after, line, function)
             elif tosearch == "%=":
-                self.var[l[posi[0]:posi[1]]][index] = self.var[l[posi[0]:posi[1]]][index] % self.tokeytype(keytype, after, line)
+                self.var[l][index] = self.var[l][index] % self.tokeytype(keytype, after, line, function)
             elif tosearch == "^=":
-                self.var[l[posi[0]:posi[1]]][index] = self.tokeytype(keytype, after, line) ^ semf.tokeytype(keytype, after, line)
+                self.var[l][index] = self.tokeytype(keytype, after, line, function) ^ self.tokeytype(keytype, after, line, function)
             elif tosearch == "=":
-                self.var[l[posi[0]:posi[1]]][index] = self.tokeytype(keytype, after, line)
+                self.var[l][index] = self.tokeytype(keytype, after, line, function)
         else:
             if tosearch == "**=":
-                self.var[l[posi[0]:posi[1]]] = self.var[l[posi[0]:posi[1]]] ** self.tokeytype(keytype, after, line)
+                self.var[l] = self.var[l] ** self.tokeytype(keytype, after, line, function)
             elif tosearch == "*=":
-                self.var[l[posi[0]:posi[1]]] = self.var[l[posi[0]:posi[1]]] * self.tokeytype(keytype, after, line)
+                self.var[l] = self.var[l] * self.tokeytype(keytype, after, line, function)
             elif tosearch == "+=":
-                self.var[l[posi[0]:posi[1]]] = self.var[l[posi[0]:posi[1]]] + self.tokeytype(keytype, after, line)
+                self.var[l] = self.var[l] + self.tokeytype(keytype, after, line, function)
             elif tosearch == "-=":
-                self.var[l[posi[0]:posi[1]]] = self.var[l[posi[0]:posi[1]]] - self.tokeytype(keytype, after, line)
+                self.var[l] = self.var[l] - self.tokeytype(keytype, after, line, function)
             elif tosearch == "/=":
-                self.var[l[posi[0]:posi[1]]] = self.var[l[posi[0]:posi[1]]] / self.tokeytype(keytype, after, line)
+                self.var[l] = self.var[l] / self.tokeytype(keytype, after, line, function)
             elif tosearch == "%=":
-                self.var[l[posi[0]:posi[1]]] = self.var[l[posi[0]:posi[1]]] % self.tokeytype(keytype, after, line)
+                self.var[l] = self.var[l] % self.tokeytype(keytype, after, line, function)
             elif tosearch == "^=":
-                self.var[l[posi[0]:posi[1]]] = self.var[l[posi[0]:posi[1]]] ^ self.tokeytype(keytype, after, line)
+                self.var[l] = self.var[l] ^ self.tokeytype(keytype, after, line, function)
             elif tosearch == "=":
-                self.var[l[posi[0]:posi[1]]] = self.tokeytype(keytype, after, line)
+                self.var[l] = self.tokeytype(keytype, after, line, function)
 
 
-    def getParameters(self, function, line):
+    def getParameters(self, function, lastf, line):
         parameters = []
         pos=1
         l = function
@@ -717,14 +759,15 @@ class ls():
         if l.rfind(')') == -1:
             after+=')'
         afterr = after
+        lf = (lastf[:lastf.find('(')] if lastf.find('(') != -1 else lastf)
         while pos:
             if search(after, ",") != -1:
                 afterr = after[:search(after, ",")+1]
             else:
                 afterr = after
                 
-            if self.typescan(afterr, line, 1) != -1:
-                parameters.append(self.tokeytype(-1, afterr, line))
+            if self.typescan(afterr, line, test = 1) != -1:
+                parameters.append(self.tokeytype(-1, afterr, line, lf))
             else:
                 pos = 0
                 
@@ -735,7 +778,31 @@ class ls():
         return parameters
 
 
-    def getlist(self, string, line):
+    def getlist(self, string, line, function):
+        parameters = []
+        pos=1
+        l = string
+        after = l[search(l, "[")+1:l.rfind("]")]
+        afterr = after
+        while pos:
+            if search(after, ",") != -1:
+                afterr = after[:search(after, ",")]
+            else:
+                afterr = after
+            if self.typescan(afterr, line, test = 1) != -1:
+                parameters.append(self.tokeytype(-1, afterr, line, function))
+            else:
+                pos = 0
+                
+            if search(after, ",") == -1:
+                after = after[:-1]
+            else:
+                after = after[search(after, ",")+1:]
+        return parameters
+    
+
+    # dictionnary are not yet used
+    """def getdict(self, string, line):
         parameters = []
         pos=1
         l = string
@@ -756,7 +823,7 @@ class ls():
                 after = after[:-1]
             else:
                 after = after[search(after, ",")+1:]
-        return parameters
+        return parameters"""
 
 
     def scanCondI(self, l):
@@ -766,19 +833,19 @@ class ls():
         self.condition[l[posi[0]:posi[1]]] = notab(after)
 
 
-    def scanPointI(self, l, line):
+    def scanPointI(self, l, line, function):
         before = l[:search(l, "->")]
         after = notab(l[searchend(l, "->"):])
         pos = isvar(after)[1]
         after = after[pos[0]:pos[1]]
-        if self.typescan(before, line, 1) == "var":
+        if self.typescan(before, line, test = 1) == "var":
             self.var[after] = '&'+before
         else:
-            self.scanVarI(self.var[after]+'='+before, line)
+            self.scanVarI(self.var[after]+'='+before, line, function)
         return
 
             
-    def condI(self, l, line):
+    def condI(self, l, line, function):
         pos = iscond(l)
         iselse = 0
         if pos[0]:
@@ -789,50 +856,50 @@ class ls():
                 c = self.condition[l[posi[0]+1:posi[1]]]
             else:
                 c = self.condition[l[posi[0]:posi[1]]]
-            after = self.tokeytype(-1, c[search(c, "=")+1:], line)
-            before = self.tokeytype(-1, c[:search(c, "=")], line)
+            after = self.tokeytype(-1, c[search(c, "=")+1:], line, function)
+            before = self.tokeytype(-1, c[:search(c, "=")], line, function)
             if search(c, "==") != -1:
                 if before == after:
                     if iselse == 0:
-                        return self.exec_(f, line, [], f, one=l)
+                        return self.exec_(f, line, [], function, one=l)
                 else:
                     if iselse == 1:
-                        return self.exec_(f, line, [], f, one=l)
+                        return self.exec_(f, line, [], function, one=l)
             elif search(c, ">") != -1:
                 if before > after:
                     if iselse == 0:
-                        return self.exec_(f, line, [], f, one=l)
+                        return self.exec_(f, line, [], function, one=l)
                 else:
                     if iselse == 1:
-                        return self.exec_(f, line, [], f, one=l)
+                        return self.exec_(f, line, [], function, one=l)
             elif search(c, "<") != -1:
                 if before < after:
                     if iselse == 0:
-                        return self.exec_(f, line, [], f, one=l)
+                        return self.exec_(f, line, [], function, one=l)
                 else:
                     if iselse == 1:
-                        return self.exec_(f, line, [], f, one=l)
+                        return self.exec_(f, line, [], function, one=l)
             elif search(c, "!=") != -1:
                 if before != after:
                     if iselse == 0:
-                        return self.exec_(f, line, [], f, one=l)
+                        return self.exec_(f, line, [], function, one=l)
                 else:
                     if iselse == 1:
-                        return self.exec_(f, line, [], f, one=l)
+                        return self.exec_(f, line, [], function, one=l)
             elif search(c, "<=") != -1:
                 if before <= after:
                     if iselse == 0:
-                        return self.exec_(f, line, [], f, one=l)
+                        return self.exec_(f, line, [], function, one=l)
                 else:
                     if iselse == 1:
-                        return self.exec_(f, line, [], f, one=l)
+                        return self.exec_(f, line, [], function, one=l)
             elif search(c, ">=") != -1:
                 if before >= after:
                     if iselse == 0:
-                        return self.exec_(f, line, [], f, one=l)
+                        return self.exec_(f, line, [], function, one=l)
                 else:
                     if iselse == 1:
-                        return self.exec_(f, line, [], f, one=l)
+                        return self.exec_(f, line, [], function, one=l)
             
 
     def exec_(self, i, line, parameters, function, end = "end def", one = 0):
@@ -844,24 +911,38 @@ class ls():
             script = self.script[func:]
             parametersF = getParametersF(script[0])
             script = script[1:index(script, end)]
-            if len(parameters) > len(parametersF):
-                printc("Error: too many parameters for function `{}', at line {}".format(function, line))
+            if not '%...args%' in parametersF:
+                if len(parameters) > len(parametersF):
+                    printc(f"Error: too many parameters for function `{function}', at line {line}")
+            else:
+                print("param", parameters, i)
+                parametersPP = parameters[:len(parametersF)+1]
+                print("paramP", parametersPP, i)
+                parametersP = parameters[len(parametersPP):]
+                print("paramPP", parametersP, i)
+                parameters = parametersPP
+                parameters.append(parametersP)
+                print("param", parameters, i)
             if len(parameters) < len(parametersF):
-                printc("Error: not enough parameters for function `{}', at line {}".format(function, line))
+                printc(f"Error: not enough parameters for function `{function}', at line {line}")
                 return None
             for i in range(len(parametersF)):
-                self.var[parametersF[i]] = parameters[i]
+                keyT = scankeyType(parametersF[i])
+                if keyT == "global":
+                    self.scanVarI("{} = {}".format(parametersF[i], parameters[i]), line, function[:function.find('(')])
+                else:
+                    self.scanVarI("{} = {}".format(function[:function.find('(')]+'.'+parametersF[i], parameters[i]), line, function[:function.find('(')])
             while j != len(script):
                 line2 = line + j
                 i = script[j]
                 if iscond(i)[0] == 0 and isvar(i) != -1 and scanOperatorEqual(i) != -1:
-                    self.scanVarI(i, line2)
+                    self.scanVarI(i, line2, function[:function.find('(')])
                 elif iscond(i)[0] == 1 and scanCondType(i) != -1:
                     self.scanCondI(i)
                 elif iscond(i)[0] == 1:
-                    toreturn = self.condI(i, line2)
+                    toreturn = self.condI(i, line2, function[:function.find('(')])
                 else:
-                    toreturn = self.exec(i, line2)
+                    toreturn = self.exec(i, line2, function)
                 if type(toreturn) == type([1, 1]):
                     if toreturn[0] == "__Python__.__ls__.__sys__.__goto__":
                         j = toreturn[1]-line
@@ -871,14 +952,15 @@ class ls():
             return toreturn
         else:
             line2 = line
+            lf = (function[:function.find('(')] if function.find("(") != -1 else function)
             if iscond(i)[0] == 0 and isvar(i) != -1 and scanOperatorEqual(i) != -1:
-                self.scanVarI(i, line)
+                self.scanVarI(i, line, lf)
             elif iscond(i)[0] == 1 and scanCondType(i) != -1:
                 self.scanCondI(i)
             elif iscond(i)[0] == 1:
-                toreturn = self.condI(i, line2)
+                toreturn = self.condI(i, line2, lf)
             else:
-                toreturn = self.exec(i, line2)
+                toreturn = self.exec(i, line2, function)
         return toreturn
 
 
@@ -892,9 +974,9 @@ class ls():
             parametersF = getParametersF(script[0])
             script = script[1:index(script, end)]
             if len(parameters) > len(parametersF):
-                printc("Error: too many parameters for function `{}', at line {}".format(function, line))
+                printc(f"Error: too many parameters for function `{function}', at line {line}")
             if len(parameters) < len(parametersF):
-                printc("Error: not enough parameters for function `{}', at line {}".format(function, line))
+                printc(f"Error: not enough parameters for function `{function}', at line {line}")
                 return None
             for i in range(len(parametersF)):
                 self.var[parametersF[i]] = parameters[i]
@@ -907,9 +989,9 @@ class ls():
                 elif iscond(i)[0] == 1 and scanCondType(i) != -1:
                     self.scanCondI(i)
                 elif iscond(i)[0] == 1:
-                    toreturn = self.condI(i, line2)
+                    toreturn = self.condI(i, line2, function[:function.find('(')])
                 else:
-                    toreturn = self.exec(i, line2)
+                    toreturn = self.exec(i, line2, function[:function.find('(')])
                 if type(toreturn) == type([1, 1]):
                     if toreturn[0] == "__Python__.__ls__.__sys__.__goto__":
                         j = toreturn[1]-line
@@ -924,17 +1006,17 @@ class ls():
             elif iscond(i)[0] == 1 and scanCondType(i) != -1:
                 self.scanCondI(i)
             elif iscond(i)[0] == 1:
-                toreturn = self.condI(i, line2)
+                toreturn = self.condI(i, line2, function[:function.find('(')])
             else:
-                toreturn = self.exec(i, line2, 1)
+                toreturn = self.exec(i, line2, function[:function.find('(')], 1)
         return toreturn
             
               
-    def exec(self, function, line, obo = 0):
+    def exec(self, function, line, lastF = "", obo = 0):
         func = ""
         function = notab(function)
         toreturn = None
-        parameters = self.getParameters(function, line)
+        parameters = self.getParameters(function, lastF, line)
         for i in self.functions:
             nf = i[:search(i, "(")]+'()'
             tcf = function[:search(function, "(")]+'()'
@@ -951,7 +1033,7 @@ class ls():
             if nf == tcf:
                 parametersF = getParametersF(i)
                 if len(parameters) < len(parametersF):
-                    printc("Error: not enough parameters for function `{}', at line {}".format(function, line+1))
+                    printc(f"Error: not enough parameters for function `{function}', at line {line}")
                     return None
                 func = i
                 func = self.default_function[func]
@@ -966,7 +1048,10 @@ class ls():
                 elif func == 4:
                     toreturn = parameters[0]
                 elif func == 5:
-                    toreturn = len(parameters[0])
+                    try:
+                        toreturn = len(parameters[0])
+                    except:
+                        printc(f"Error at line {line}, can't perform `len()'")
                 elif func == 6:
                     toreturn = ["__Python__.__ls__.__sys__.__goto__", self.label[parameters[0]]]
                 elif func == 7:
@@ -980,10 +1065,38 @@ class ls():
                 elif func == 11:
                     toreturn = type(parameters[0])
                 elif func == 12:
-                    toreturn = type(parameters[0])
+                    toreturn = self.typescan(parameters[0], line, test = 1)
+                    if (toreturn == "var"):
+                        toreturn = self.typescan(str(typescan(parameters[0], line)), line, test = 1)
                     break
+                elif func == 13:
+                    fpar = getParametersF(function)[0]
+                    after = isvar(fpar)
+                    try:
+                        if isvar(after)[1][0] < islist(after)[1][0]:
+                            index = getlist(after, self.var)[0]
+                            s = isvar(after)
+                            self.var[fpar[after[1][0]:after[1][1]]].pop(index)
+                        s = isvar(after)
+                        self.var[fpar[after[1][0]:after[1][1]]].pop()
+                    except:
+                        try:
+                            if isvar(after)[1][0] < islist(after)[1][0]:
+                                index = getlist(after, self.var)[0]
+                                s = isvar(after)
+                                self.var[lastF[:lastF.find('(')]+'.'+fpar[after[1][0]:after[1][1]]].pop(index)
+                            s = isvar(after)
+                            self.var[lastF[:lastF.find('(')]+'.'+fpar[after[1][0]:after[1][1]]].pop()
+                        except:
+                            printc(f"Error at line {line}, variable `{lastF[:lastF.find('(')]+'.'+fpar[after[1][0]:after[1][1]]}' referenced before assignent.")
+                            printc("Prehaps you have forgot `raw' or `global' ?")
+                            return -1
+                    
+                elif func == 14:
+                    # list()
+                    return [0 for i in range(parameters[0])]
         if func == "":
-            printc("Error, function not found `{}' at line {}".format(function, line))
+            printc(f"Error, function not found `{function}' at line {line}")
             return None
         return toreturn
 
@@ -1020,7 +1133,7 @@ def run(e = None):
     reader = ls(read(file))
     reader.parse(read(file))
     reader.var["noargs"] = [file]
-    reader.exec("start(%noargs%)", 0)
+    reader.exec("start(%noargs%)", 0, "file")
 
 
 def run_lbl():
@@ -1137,13 +1250,17 @@ def scanKeyWord(after):
         return [search(after, "bin "), searchend(after, "bin ")]
     elif search(after, "hex ") != -1:
         return [search(after, "hex "), searchend(after, "hex ")]
+    elif search(after, "global ") != -1:
+        return [search(after, "global "), searchend(after, "global ")]
+    elif search(after, "raw ") != -1:
+        return [search(after, "raw "), searchend(after, "raw ")]
     return [-1, -1]
 
     
 def execc_():
     j=0
     line = 1
-    script = getAllLines(text.get("1.0", END))
+    script = getAllLines(text.get("1.0", END), 1)
     for tag in text.tag_names():
         text.tag_remove(tag, "1.0", END)
     tags = []
