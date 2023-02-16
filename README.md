@@ -7,7 +7,8 @@ No need to get [LSpy.py](<https://github.com/Pokecraft-exe/Light-Script/blob/mai
 To run your .ls code, use
 ```console
 python LSpy.py [file] # for windows
-python3 LSpy.py [file] # fro linux``` 
+python3 LSpy.py [file] # fro linux
+``` 
 
 [To access the project wiki](https://github.com/Pokecraft-exe/Light-Script/wiki)
 
